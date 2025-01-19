@@ -2,6 +2,7 @@ import arcade
 import arcade.gui
 import easygui
 import os
+import random
 
 from arcade.examples.minimap import MAP_HEIGHT
 
@@ -17,6 +18,7 @@ SCREEN_HEIGHT = 1000
 SCREEN_TITLE = "Voyage au centre de la galaxie"
 MAIN_MENU_BACKGROUND_FILE_PATH = os.path.join(WORLDS_BACKGROUNDS_LOCATION,'main.png')
 USE_ITEM_INVENTORY_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'inventory.png')
+END_TURN_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'end_turn.png')
 
 SIDEBAR_WIDTH = SCREEN_WIDTH * 0.3
 MAP_WIDTH = SCREEN_WIDTH - SIDEBAR_WIDTH
@@ -39,15 +41,15 @@ WORLD_1_MERCHANT_LOCATIONS = [10,20,29]
 WORLD_1_QUESTION_LOCATIONS = [2,5,11,12,13,16,18,21,25,26]
 WORLD_1_NEUTRAL_LOCATIONS = [1,6,8,9,14,17,22,28,30]
 
-WORLD_2_MALUS_LOCATIONS = []
-WORLD_2_MERCHANT_LOCATIONS = []
-WORLD_2_QUESTION_LOCATIONS = []
-WORLD_2_NEUTRAL_LOCATIONS = []
+WORLD_2_MALUS_LOCATIONS = [3,8,11,14,17,23,24,27,32,35]
+WORLD_2_MERCHANT_LOCATIONS = [10,20,30,39]
+WORLD_2_QUESTION_LOCATIONS = [2,4,5,6,9,12,15,18,19,22,26,29,33,36,38]
+WORLD_2_NEUTRAL_LOCATIONS = [1,7,13,16,21,25,28,31,34,37,40]
 
-WORLD_3_MALUS_LOCATIONS = []
-WORLD_3_MERCHANT_LOCATIONS = []
-WORLD_3_QUESTION_LOCATIONS = []
-WORLD_3_NEUTRAL_LOCATIONS = []
+WORLD_3_MALUS_LOCATIONS = [3,4,7,11,14,19,21,24,32,38,41,43,44,45,47,49]
+WORLD_3_MERCHANT_LOCATIONS = [10,15,25,40]
+WORLD_3_QUESTION_LOCATIONS = [5,6,8,9,12,13,16,18,20,22,26,28,30,33,34,35,37]
+WORLD_3_NEUTRAL_LOCATIONS = [1,2,16,17,23,27,29,31,36,39,42,46,48,50]
 
 MALUS_LOCATION_COLOR = arcade.color.RED
 MERCHANT_LOCATION_COLOR = arcade.color.BLUE
@@ -146,11 +148,15 @@ class Player:
 class Game(arcade.Window):
     def __init__(self, world_rows, number_of_players, players_names):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+
         arcade.set_background_color(arcade.color.BLACK)
         self.num_players = number_of_players
         self.player_names = players_names
+
         self.current_world = 1
+
         self.background = arcade.load_texture(get_map_background_for_world(self.current_world))
+
         self.board = []
         self.square_width = MAP_WIDTH // COLUMNS_IN_A_WORLD
         self.square_height = SCREEN_HEIGHT // world_rows
@@ -163,7 +169,6 @@ class Game(arcade.Window):
 
         def define_players():
             players_list = []
-
             for player, player_number in enumerate(range(number_of_players)):
                 player_name = players_names[player_number]
                 player_id = player_number
@@ -172,19 +177,80 @@ class Game(arcade.Window):
             return players_list
 
         self.players = define_players()
-        self.player_sprites = arcade.SpriteList()
-        self.dice_sprites = arcade.SpriteList()
-        for player in self.players:
-            self.player_sprites.append(player.player_sprite)
-        for dice in range(0,6):
-            dice_number_on_face = dice
-            self.dice_sprites.append(arcade.Sprite(get_dice_sprite(dice_number_on_face)))
-        self.dice_sprite = self.dice_sprites[0]
-        self.use_item_sprite = arcade.Sprite(USE_ITEM_INVENTORY_ICON_FILE_PATH)
-        self.player_turn = 1
 
         # If you have sprite lists, you should create them here,
         # and set them to None
+        self.player_sprites = arcade.SpriteList()
+        self.dice_sprites = arcade.SpriteList()
+
+        for player in self.players:
+            self.player_sprites.append(player.player_sprite)
+
+        for dice in range(0,7):
+            dice_number_on_face = dice
+            dice_to_add = arcade.Sprite(get_dice_sprite(dice_number_on_face))
+            self.dice_sprites.append(dice_to_add)
+
+        self.dice_sprite = self.dice_sprites[0]
+        self.use_item_sprite = arcade.Sprite(USE_ITEM_INVENTORY_ICON_FILE_PATH)
+        self.end_turn_sprite = arcade.Sprite(END_TURN_ICON_FILE_PATH)
+        self.player_turn = 1
+
+    def update_map(self, world):
+        # Determine the number of rows based on the current world
+        if world == 1:
+            rows = WORLD_1_NUMBER_OF_ROWS
+        elif world == 2:
+            rows = WORLD_2_NUMBER_OF_ROWS
+        elif world == 3:
+            rows = WORLD_3_NUMBER_OF_ROWS
+        else:
+            raise ValueError("Invalid world number")
+
+        # Create a new board with the correct number of squares
+        self.board = []
+        for row in range(rows):
+            self.board.append([])
+            for column in range(COLUMNS_IN_A_WORLD):
+                location_number = row * COLUMNS_IN_A_WORLD + column + 1
+                self.board[row].append(get_square_color_by_location_number(world, location_number))
+
+        # Update the background
+        self.background = arcade.load_texture(get_map_background_for_world(world))
+
+    def roll_dice(self):
+        dice_number = random.randint(1, 6)  # Generate a random number between 1 and 6
+        self.dice_sprite = self.dice_sprites[dice_number]  # Update the dice sprite
+
+        # Update the player's turn before getting the current player
+        last_player_to_play = self.player_turn
+        if last_player_to_play == len(self.players):
+            self.player_turn = 1
+        else:
+            self.player_turn += 1
+
+        # Get the current player
+        current_player = self.players[self.player_turn - 1]  # Subtract 1 because list indices start at 0
+
+        # Update the player's location
+        current_player.world_location += dice_number
+
+        # If player's location exceeds the maximum location in the world, move to next world or end game
+        if current_player.current_world == 1 and current_player.world_location > WORLD_1_NUMBER_OF_LOCATIONS:
+            excess_steps = current_player.world_location - WORLD_1_NUMBER_OF_LOCATIONS
+            current_player.current_world = 2
+            current_player.world_location = 1 + excess_steps
+            self.current_world = current_player.current_world
+        elif current_player.current_world == 2 and current_player.world_location > WORLD_2_NUMBER_OF_LOCATIONS:
+            excess_steps = current_player.world_location - WORLD_2_NUMBER_OF_LOCATIONS
+            current_player.current_world = 3
+            current_player.world_location = 1 + excess_steps
+            self.current_world = current_player.current_world
+        elif current_player.current_world == 3 and current_player.world_location > WORLD_3_NUMBER_OF_LOCATIONS:
+            # End game or wrap around to first world, depending on your game rules
+            pass
+
+        return dice_number
 
     def on_draw(self):
         """
@@ -265,20 +331,31 @@ class Game(arcade.Window):
             return x, y
 
         def calculate_inventory_sprite_position():
+            x = MAP_WIDTH + (SIDEBAR_WIDTH // 2)
+            y = bottom_bar_height // 2
+
+            return x, y
+
+        def calculate_end_turn_sprite_position():
             x = MAP_WIDTH + ((SIDEBAR_WIDTH // 4) * 3)
             y = bottom_bar_height // 2
 
             return x, y
 
         for player in self.players:
-            player.player_sprite.center_x, player.player_sprite.center_y = calculate_sprite_position(player)
+            if player.current_world == self.current_world:  # Only draw the sprite if the player is in the current world
+                player.player_sprite.center_x, player.player_sprite.center_y = calculate_sprite_position(player)
+            else:
+                player.player_sprite.center_x, player.player_sprite.center_y = -100, -100  # Move the sprite off-screen
 
         self.dice_sprite.center_x, self.dice_sprite.center_y = calculate_dice_sprite_position()
         self.use_item_sprite.center_x, self.use_item_sprite.center_y = calculate_inventory_sprite_position()
+        self.end_turn_sprite.center_x, self.end_turn_sprite.center_y = calculate_end_turn_sprite_position()
         # Call draw() on all your sprite lists below
         self.player_sprites.draw()
         self.dice_sprite.draw()
         self.use_item_sprite.draw()
+        self.end_turn_sprite.draw()
 
     def on_update(self, delta_time):
         """
@@ -287,22 +364,15 @@ class Game(arcade.Window):
         need it.
         """
 
-        def refresh_map_for_new_turn(current_player_turn, current_player_world, current_player_location, players):
-            map_background_to_display_file_path = get_map_background_for_world(current_player_world)
-            players_to_display_on_map = get_players_in_world(current_player_world, players)
-            for player in players_to_display_on_map:
-                player_location_on_map = player.world_location
+    def manage_new_turn(self, last_player_to_play, players):
+        if last_player_to_play == len(players):
+            active_player_id = 1
+        else:
+            active_player_id = last_player_to_play + 1
 
-        def manage_new_turn(last_player_to_play, players):
-            if last_player_to_play == len(players):
-                active_player_id = 1
-            else:
-                active_player_id = last_player_to_play + 1
+        active_player = players[active_player_id - 1]
 
-            active_player = players[active_player_id - 1]
-            active_player_world = active_player.current_world
-            active_player_location = active_player.world_location
-            refresh_map_for_new_turn(active_player_id, active_player_world, active_player_location, players)
+        self.update_map(active_player.current_world)
 
     def on_key_press(self, key, key_modifiers):
         """
@@ -329,7 +399,9 @@ class Game(arcade.Window):
         """
         Called when the user presses a mouse button.
         """
-        pass
+        if self.dice_sprite.collides_with_point((x, y)):  # If the player clicks on the dice sprite
+            dice_number = self.roll_dice()  # Roll the dice
+        self.manage_new_turn(self.player_turn, self.players)
 
     def on_mouse_release(self, x, y, button, key_modifiers):
         """
