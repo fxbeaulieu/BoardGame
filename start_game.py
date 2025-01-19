@@ -2,6 +2,7 @@ import arcade
 import arcade.gui
 import easygui
 import os
+import time
 import random
 
 from arcade.examples.minimap import MAP_HEIGHT
@@ -56,6 +57,11 @@ MERCHANT_LOCATION_COLOR = arcade.color.BLUE
 QUESTION_LOCATION_COLOR = arcade.color.GREEN
 NEUTRAL_LOCATION_COLOR = arcade.color.WHITE
 
+PLAYER1_COLOR = arcade.color.RICH_ELECTRIC_BLUE
+PLAYER2_COLOR = arcade.color.AMETHYST
+PLAYER3_COLOR = arcade.color.LIME_GREEN
+PLAYER4_COLOR = arcade.color.MEDIUM_VERMILION
+
 def game_start_user_inputs():
     num_of_players = None
     while num_of_players is None:
@@ -83,6 +89,18 @@ def get_player_sprite(player_number):
     sprite_file_path = os.path.join(SPRITES_LOCATION,sprite_file_name)
 
     return sprite_file_path
+
+def get_player_color_by_number(player_number):
+    if player_number == 0:
+        player_color = PLAYER1_COLOR
+    elif player_number == 1:
+        player_color = PLAYER2_COLOR
+    elif player_number == 2:
+        player_color = PLAYER3_COLOR
+    elif player_number == 3:
+        player_color = PLAYER4_COLOR
+
+    return player_color
 
 def get_map_background_for_world(current_world):
     background_file_name = "background_world" + str(current_world) + ".png"
@@ -144,10 +162,13 @@ class Player:
         self.currently_held_items = []
         self.currently_affected_by_malus = []
         self.currently_affected_by_bonus = []
+        self.number_of_dice_rolls_next_turn = 1
 
 class Game(arcade.Window):
     def __init__(self, world_rows, number_of_players, players_names):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+        self.text_visibility = True
+        self.start_time = time.time()
 
         arcade.set_background_color(arcade.color.BLACK)
         self.num_players = number_of_players
@@ -222,13 +243,6 @@ class Game(arcade.Window):
         dice_number = random.randint(1, 6)  # Generate a random number between 1 and 6
         self.dice_sprite = self.dice_sprites[dice_number]  # Update the dice sprite
 
-        # Update the player's turn before getting the current player
-        last_player_to_play = self.player_turn
-        if last_player_to_play == len(self.players):
-            self.player_turn = 1
-        else:
-            self.player_turn += 1
-
         # Get the current player
         current_player = self.players[self.player_turn - 1]  # Subtract 1 because list indices start at 0
 
@@ -241,11 +255,15 @@ class Game(arcade.Window):
             current_player.current_world = 2
             current_player.world_location = 1 + excess_steps
             self.current_world = current_player.current_world
+            self.update_map(self.current_world)
+
         elif current_player.current_world == 2 and current_player.world_location > WORLD_2_NUMBER_OF_LOCATIONS:
             excess_steps = current_player.world_location - WORLD_2_NUMBER_OF_LOCATIONS
             current_player.current_world = 3
             current_player.world_location = 1 + excess_steps
             self.current_world = current_player.current_world
+            self.update_map(self.current_world)
+
         elif current_player.current_world == 3 and current_player.world_location > WORLD_3_NUMBER_OF_LOCATIONS:
             # End game or wrap around to first world, depending on your game rules
             pass
@@ -290,10 +308,15 @@ class Game(arcade.Window):
 
         # Draw player names and information on the sidebar
         for i, player_name in enumerate(self.player_names):
+            current_player = self.players[self.player_turn - 1].player_id
             y = SCREEN_HEIGHT - (i * 150 + 30)  # Increase distance between each player's information and move it further down
             player_name_text=f"{player_name}"
             first_text_width = len(player_name_text) * 18
-            arcade.draw_text(player_name_text, MAP_WIDTH + 15, y, arcade.color.ELECTRIC_VIOLET, 18,bold=True)  # Move text further to the right
+            if current_player == i:
+                if self.text_visibility:
+                    arcade.draw_text(player_name_text, MAP_WIDTH + 15, y, get_player_color_by_number(i), 18,bold=True)  # Move text further to the right
+            else:
+                arcade.draw_text(player_name_text, MAP_WIDTH + 15, y, get_player_color_by_number(i), 18, bold=True)
             padding = 25
             second_text_x = MAP_WIDTH + 15 + first_text_width + padding
             arcade.draw_text(f"{self.players[i].current_dollbran_amount} Dollbrans", second_text_x, y, arcade.color.GOLD, 12, bold=True)
@@ -363,14 +386,22 @@ class Game(arcade.Window):
         Normally, you'll call update() on the sprite lists that
         need it.
         """
+        if time.time() - self.start_time > 0.5:  # Adjusts the blink speed
+            self.text_visibility = not self.text_visibility
+            self.start_time = time.time()
+
 
     def manage_new_turn(self, last_player_to_play, players):
-        if last_player_to_play == len(players):
-            active_player_id = 1
-        else:
-            active_player_id = last_player_to_play + 1
+        # Update the player's turn before getting the current player
+        last_player_to_play = self.player_turn
+        self.players[last_player_to_play - 1].number_of_dice_rolls_next_turn = 1
 
-        active_player = players[active_player_id - 1]
+        if last_player_to_play == len(self.players):
+            self.player_turn = 1
+        else:
+            self.player_turn += 1
+
+        active_player = self.players[self.player_turn - 1]
 
         self.update_map(active_player.current_world)
 
@@ -399,9 +430,22 @@ class Game(arcade.Window):
         """
         Called when the user presses a mouse button.
         """
+        active_player = self.players[self.player_turn - 1]
+        number_of_clicks_allowed_on_dice = active_player.number_of_dice_rolls_next_turn
+
         if self.dice_sprite.collides_with_point((x, y)):  # If the player clicks on the dice sprite
-            dice_number = self.roll_dice()  # Roll the dice
-        self.manage_new_turn(self.player_turn, self.players)
+            if number_of_clicks_allowed_on_dice > 0:
+                dice_number = self.roll_dice()  # Roll the dice
+                number_of_clicks_allowed_on_dice -= 1
+                self.players[self.player_turn - 1].number_of_dice_rolls_next_turn = number_of_clicks_allowed_on_dice
+            else:
+                pass
+
+        if self.end_turn_sprite.collides_with_point((x, y)):
+            if number_of_clicks_allowed_on_dice > 0:
+                pass
+            else:
+                self.manage_new_turn(self.player_turn, self.players)
 
     def on_mouse_release(self, x, y, button, key_modifiers):
         """
