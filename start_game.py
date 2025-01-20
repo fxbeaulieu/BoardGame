@@ -57,6 +57,11 @@ MERCHANT_LOCATION_COLOR = arcade.color.BLUE
 QUESTION_LOCATION_COLOR = arcade.color.GREEN
 NEUTRAL_LOCATION_COLOR = arcade.color.WHITE
 
+MALUS_LOCATION_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'malus.png')
+MERCHANT_LOCATION_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'merchant.png')
+QUESTION_LOCATION_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'question.png')
+NEUTRAL_LOCATION_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'neutral.png')
+
 PLAYER1_COLOR = arcade.color.RICH_ELECTRIC_BLUE
 PLAYER2_COLOR = arcade.color.AMETHYST
 PLAYER3_COLOR = arcade.color.LIME_GREEN
@@ -289,10 +294,25 @@ class Game(arcade.Window):
         for row in range(len(self.board)):
             for column in range(COLUMNS_IN_A_WORLD):
                 color = (*self.board[row][column], 175)
+                if color == (255, 0, 0, 175):
+                    icon = arcade.Sprite(MALUS_LOCATION_ICON_FILE_PATH)
+                elif color == (0, 0, 255, 175):
+                    icon = arcade.Sprite(MERCHANT_LOCATION_ICON_FILE_PATH)
+                elif color == (0, 255, 0, 175):
+                    icon = arcade.Sprite(QUESTION_LOCATION_ICON_FILE_PATH)
+                elif color == (255, 255, 255, 175):
+                    icon = arcade.Sprite(NEUTRAL_LOCATION_ICON_FILE_PATH)
+
                 x = column * self.square_width + (self.square_width / 2)
                 y = SCREEN_HEIGHT - (row * self.square_height + (self.square_height / 2))
                 arcade.draw_rectangle_filled(x, y, self.square_width, self.square_height, color)
                 arcade.draw_rectangle_outline(x, y, self.square_width+2.5, self.square_height+2.5, arcade.color.ELECTRIC_VIOLET, border_width=5)
+                icon_x = x - (self.square_width / 2) + 5
+                icon_y = y + (self.square_height / 2) - 5
+                icon.center_x = icon_x + icon.width / 2  # Add half the width of the icon to center it within that space
+                icon.center_y = icon_y - icon.height / 2  # Subtract half the height of the icon to center it within that space
+
+                icon.draw()
 
                 text_background_width = self.square_width / 4
                 text_background_height = self.square_height / 4
