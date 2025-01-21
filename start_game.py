@@ -17,11 +17,10 @@ SCREEN_HEIGHT = 1000
 SCREEN_TITLE = "Voyage au centre de la galaxie"
 MAIN_MENU_BACKGROUND_FILE_PATH = os.path.join(WORLDS_BACKGROUNDS_LOCATION,'main.png')
 
-USE_ITEM_INVENTORY_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'inventory.png')
-END_TURN_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'end_turn.png')
-
 SIDEBAR_WIDTH = SCREEN_WIDTH * 0.3
 MAP_WIDTH = SCREEN_WIDTH - SIDEBAR_WIDTH
+BOTTOM_BAR_HEIGHT = 150  # Set the height of the bottom bar
+
 SPRITE_OFFSET_X = 15
 SPRITE_OFFSET_Y = 5
 
@@ -75,6 +74,9 @@ PLAYER1_COLOR = arcade.color.RICH_ELECTRIC_BLUE
 PLAYER2_COLOR = arcade.color.AMETHYST
 PLAYER3_COLOR = arcade.color.LIME_GREEN
 PLAYER4_COLOR = arcade.color.MEDIUM_VERMILION
+
+USE_ITEM_INVENTORY_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'inventory.png')
+END_TURN_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'end_turn.png')
 
 def game_start_user_inputs():
     num_of_players = None
@@ -212,12 +214,12 @@ class Game(arcade.Window):
         self.text_visibility = True
         self.start_time = time.time()
 
-        arcade.set_background_color(arcade.color.BLACK)
         self.num_players = number_of_players
         self.player_names = players_names
 
-        self.current_world = 1
+        arcade.set_background_color(arcade.color.BLACK)
 
+        self.current_world = 1
         self.background = arcade.load_texture(get_map_background_for_world(self.current_world))
 
         self.board = []
@@ -257,6 +259,7 @@ class Game(arcade.Window):
         self.dice_sprite = self.dice_sprites[0]
         self.use_item_sprite = arcade.Sprite(USE_ITEM_INVENTORY_ICON_FILE_PATH)
         self.end_turn_sprite = arcade.Sprite(END_TURN_ICON_FILE_PATH)
+
         self.player_turn = 1
 
     def update_map(self, world):
@@ -281,37 +284,6 @@ class Game(arcade.Window):
         # Update the background
         self.background = arcade.load_texture(get_map_background_for_world(world))
 
-    def roll_dice(self):
-        dice_number = random.randint(1, 6)  # Generate a random number between 1 and 6
-        self.dice_sprite = self.dice_sprites[dice_number]  # Update the dice sprite
-
-        # Get the current player
-        current_player = self.players[self.player_turn - 1]  # Subtract 1 because list indices start at 0
-
-        # Update the player's location
-        current_player.world_location += dice_number
-
-        # If player's location exceeds the maximum location in the world, move to next world or end game
-        if current_player.current_world == 1 and current_player.world_location > WORLD_1_NUMBER_OF_LOCATIONS:
-            excess_steps = current_player.world_location - WORLD_1_NUMBER_OF_LOCATIONS
-            current_player.current_world = 2
-            current_player.world_location = 1 + excess_steps
-            self.current_world = current_player.current_world
-            self.update_map(self.current_world)
-
-        elif current_player.current_world == 2 and current_player.world_location > WORLD_2_NUMBER_OF_LOCATIONS:
-            excess_steps = current_player.world_location - WORLD_2_NUMBER_OF_LOCATIONS
-            current_player.current_world = 3
-            current_player.world_location = 1 + excess_steps
-            self.current_world = current_player.current_world
-            self.update_map(self.current_world)
-
-        elif current_player.current_world == 3 and current_player.world_location > WORLD_3_NUMBER_OF_LOCATIONS:
-            # End game or wrap around to first world, depending on your game rules
-            pass
-
-        return dice_number
-
     def on_draw(self):
         """
         Render the screen.
@@ -320,14 +292,16 @@ class Game(arcade.Window):
         # This command should happen before we start drawing. It will clear
         # the screen to the background color, and erase what we drew last frame.
         self.clear()
+
         arcade.start_render()
-        bottom_bar_height = 150  # Set the height of the bottom bar
-        arcade.draw_rectangle_filled(MAP_WIDTH + SIDEBAR_WIDTH / 2, bottom_bar_height / 2, SIDEBAR_WIDTH, bottom_bar_height, arcade.color.BLACK)
-        arcade.draw_rectangle_outline(MAP_WIDTH + SIDEBAR_WIDTH / 2, bottom_bar_height / 2, SIDEBAR_WIDTH, bottom_bar_height, arcade.color.ELECTRIC_VIOLET, border_width=2)
+
+        arcade.draw_rectangle_filled(MAP_WIDTH + SIDEBAR_WIDTH / 2, BOTTOM_BAR_HEIGHT / 2, SIDEBAR_WIDTH, BOTTOM_BAR_HEIGHT, arcade.color.BLACK)
+        arcade.draw_rectangle_outline(MAP_WIDTH + SIDEBAR_WIDTH / 2, BOTTOM_BAR_HEIGHT / 2, SIDEBAR_WIDTH, BOTTOM_BAR_HEIGHT, arcade.color.ELECTRIC_VIOLET, border_width=2)
 
         map_center_x = MAP_WIDTH // 2
         map_center_y = SCREEN_HEIGHT // 2
         arcade.draw_texture_rectangle(map_center_x, map_center_y, MAP_WIDTH, SCREEN_HEIGHT, self.background)
+
         for row in range(len(self.board)):
             for column in range(COLUMNS_IN_A_WORLD):
                 color = (*self.board[row][column], 175)
@@ -360,6 +334,7 @@ class Game(arcade.Window):
         for i, player_name in enumerate(self.player_names):
             current_player = self.players[self.player_turn - 1].player_id
             y = SCREEN_HEIGHT - (i * 150 + 30)  # Increase distance between each player's information and move it further down
+
             player_name_text=f"{player_name}"
             first_text_width = len(player_name_text) * 18
             if current_player == i:
@@ -367,12 +342,14 @@ class Game(arcade.Window):
                     arcade.draw_text(player_name_text, MAP_WIDTH + 15, y, get_player_color_by_number(i), 18,bold=True)  # Move text further to the right
             else:
                 arcade.draw_text(player_name_text, MAP_WIDTH + 15, y, get_player_color_by_number(i), 18, bold=True)
+
             padding = 25
             second_text_x = MAP_WIDTH + 15 + first_text_width + padding
             arcade.draw_text(f"{self.players[i].current_dollbran_amount} Dollbrans", second_text_x, y, arcade.color.GOLD, 12, bold=True)
             arcade.draw_text(f"Items: {''.join(self.players[i].currently_held_items)}", MAP_WIDTH + 15, y - 25, arcade.color.WHITE, 12)
             arcade.draw_text(f"Malus actifs: {''.join(self.players[i].currently_affected_by_malus)}", MAP_WIDTH + 15, y - 70, arcade.color.ELECTRIC_GREEN, 12)
             arcade.draw_text(f"Bonus actifs: {''.join(self.players[i].currently_affected_by_bonus)}", MAP_WIDTH + 15, y - 90, arcade.color.ELECTRIC_CRIMSON, 12)
+
             # Draw a separator line below each player's information
             if i < len(self.player_names) - 1:  # Don't draw a line after the last player's information
                 arcade.draw_line(MAP_WIDTH + 10, y - 115, SCREEN_WIDTH - 10, y - 115, arcade.color.ELECTRIC_VIOLET, 2)
@@ -399,19 +376,19 @@ class Game(arcade.Window):
 
         def calculate_dice_sprite_position():
             x = MAP_WIDTH + (SIDEBAR_WIDTH // 4)
-            y = bottom_bar_height // 2
+            y = BOTTOM_BAR_HEIGHT // 2
 
             return x, y
 
         def calculate_inventory_sprite_position():
             x = MAP_WIDTH + (SIDEBAR_WIDTH // 2)
-            y = bottom_bar_height // 2
+            y = BOTTOM_BAR_HEIGHT // 2
 
             return x, y
 
         def calculate_end_turn_sprite_position():
             x = MAP_WIDTH + ((SIDEBAR_WIDTH // 4) * 3)
-            y = bottom_bar_height // 2
+            y = BOTTOM_BAR_HEIGHT // 2
 
             return x, y
 
@@ -420,12 +397,12 @@ class Game(arcade.Window):
                 player.player_sprite.center_x, player.player_sprite.center_y = calculate_sprite_position(player)
             else:
                 player.player_sprite.center_x, player.player_sprite.center_y = -100, -100  # Move the sprite off-screen
+        self.player_sprites.draw()
 
         self.dice_sprite.center_x, self.dice_sprite.center_y = calculate_dice_sprite_position()
         self.use_item_sprite.center_x, self.use_item_sprite.center_y = calculate_inventory_sprite_position()
         self.end_turn_sprite.center_x, self.end_turn_sprite.center_y = calculate_end_turn_sprite_position()
-        # Call draw() on all your sprite lists below
-        self.player_sprites.draw()
+
         self.dice_sprite.draw()
         self.use_item_sprite.draw()
         self.end_turn_sprite.draw()
@@ -440,6 +417,36 @@ class Game(arcade.Window):
             self.text_visibility = not self.text_visibility
             self.start_time = time.time()
 
+    def roll_dice(self):
+        dice_number = random.randint(1, 6)  # Generate a random number between 1 and 6
+        self.dice_sprite = self.dice_sprites[dice_number]  # Update the dice sprite
+
+        # Get the current player
+        current_player = self.players[self.player_turn - 1]  # Subtract 1 because list indices start at 0
+
+        # Update the player's location
+        current_player.world_location += dice_number
+
+        # If player's location exceeds the maximum location in the world, move to next world or end game
+        if current_player.current_world == 1 and current_player.world_location > WORLD_1_NUMBER_OF_LOCATIONS:
+            excess_steps = current_player.world_location - WORLD_1_NUMBER_OF_LOCATIONS
+            current_player.current_world = 2
+            current_player.world_location = 1 + excess_steps
+            self.current_world = current_player.current_world
+            self.update_map(self.current_world)
+
+        elif current_player.current_world == 2 and current_player.world_location > WORLD_2_NUMBER_OF_LOCATIONS:
+            excess_steps = current_player.world_location - WORLD_2_NUMBER_OF_LOCATIONS
+            current_player.current_world = 3
+            current_player.world_location = 1 + excess_steps
+            self.current_world = current_player.current_world
+            self.update_map(self.current_world)
+
+        elif current_player.current_world == 3 and current_player.world_location > WORLD_3_NUMBER_OF_LOCATIONS:
+            # End game or wrap around to first world, depending on your game rules
+            pass
+
+        return dice_number
 
     def manage_new_turn(self, last_player_to_play, players):
         # Update the player's turn before getting the current player
