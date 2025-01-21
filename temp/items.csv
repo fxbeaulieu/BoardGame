@@ -1,0 +1,32 @@
+item_id,item_name,item_cost,item_target,item_effect,item_avail_in_world
+1,Sabre-Laser,10,self,Ignore le prochain malus,3
+2,Robot Espion,20,other_player,Vole un objet à chaque joueur,3
+3,Voleur interstellaire,30,other_player,Vole tous les objets d'un joueur,3
+4,Distributeur de Dollbran,15,self,Fourni 2 Dollbran par manche pendant 10 tours,3
+5,Trou noir en bouteille,10,other_player,Un joueur de ton choix passe son prochain tour,3
+6,Pistolet-Laser,12,other_player,Double le prochain malus d'un joueur de ton choix,3
+7,Machine à clonage,10,self,Lance le dé deux fois lors de ton prochain tour,3
+8,Communicateur Holographique,15,self,Achète un objet du marchand à distance,3
+9,Moteur hyper-espace,10,self,Triple le résultat de ton prochain dé,3
+10,Ballon d'eau,10,other_player,Fait reculer le joueur de ton choix de deux cases,1
+11,Boisson énergisante,10,self,"Lors de ton prochain tour, le résultat de ton dé est augmenté. 
+Si c'est 1 ou 2 avance de 3, si c'est 3 ou 4 avance de 6 et si c'est 5 ou 6 avance de 9",1
+12,Dé truqué,10,self,"Peu importe le résultat de votre dé lors de votre prochain tour, vous avancez de 6",1
+13,Bon de réduction,15,self,"Lors de ton prochain achat chez un marchand, l'objet sera à moitié prix",1
+14,Poutine,2,self,"Lors de ton prochain tour, ajoute 1 au résultat de ton dé",1
+15,Gant de Boxe,20,all_other_players,Les autres joueurs reculent de deux cases,1
+16,Vache à lait,20,self,Annule l'effet du prochain malus,1
+17,Bombe,20,two_other_players,"Deux autres joueurs font un « roche/papier/ciseaux », le perdant recule de 4 cases.",1
+18,Éclair dans une bouteille,20,all_other_players,Vous volez 5 Dollbran à chaque autre joueur.,1
+19,Pomme,3,self,"Lors de ton prochain tour, ajoute 2 au résultat de ton dé",1
+20,Voyage rapide,40,self,Allez directement à la fusée,1
+21,Soucoupe Volante,10,self,"Lors de ton prochain tour, ajoute 5 au résultat de ton dé",2
+22,Fragment d'astéroide,14,other_player,Faites reculer un autre joueur de votre choix de 3 cases,2
+23,Carburant Turbo,20,self,"Lors de ton prochain tour, doublez le résultat de votre dé",2
+24,Machine de téléportation,25,other_player,Échangez de place avec un autre joueur,2
+25,Canon laser,25,other_player,Un joueur de votre choix passe ses deux prochains tours,2
+26,Pirate de l'espace à engager,30,self,Vous volez tous les Dollbran d'un autre joueur de votre choix,2
+27,Carte extraterrestre,40,all_other_players,Avancez directement à la dernière case,2
+28,Générateur de trou de ver,40,self,Tous les autres joueurs retournent à la première case,2
+29,Coque de vaisseau améliorée,5,self,"Lors de vos deux prochains tours, ajoutez 1 à votre dé",2
+30,Sonde spatiale,7,self,Avancez immédiatement de 3 cases,2

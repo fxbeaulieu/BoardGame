@@ -4,6 +4,9 @@ import easygui
 import os
 import time
 import random
+import sqlite3
+import json
+import openai
 
 PATH_BASE = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(PATH_BASE,'data')
@@ -16,6 +19,8 @@ SCREEN_WIDTH = 1300
 SCREEN_HEIGHT = 1000
 SCREEN_TITLE = "Voyage au centre de la galaxie"
 MAIN_MENU_BACKGROUND_FILE_PATH = os.path.join(WORLDS_BACKGROUNDS_LOCATION,'main.png')
+ITEMS_DB_FILE_PATH=os.path.join(DB_PATH,'items.db')
+MALUS_DB_FILE_PATH=os.path.join(DB_PATH,'malus.db')
 
 SIDEBAR_WIDTH = SCREEN_WIDTH * 0.3
 MAP_WIDTH = SCREEN_WIDTH - SIDEBAR_WIDTH
@@ -78,6 +83,15 @@ PLAYER4_COLOR = arcade.color.MEDIUM_VERMILION
 USE_ITEM_INVENTORY_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'inventory.png')
 END_TURN_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'end_turn.png')
 
+def get_items_from_db(number_of_items_to_get,player_in_world):
+    db_connection = sqlite3.connect(ITEMS_DB_FILE_PATH)
+
+def get_malus_from_db(player_in_world):
+    db_connection = sqlite3.connect(MALUS_DB_FILE_PATH)
+
+def get_question_with_choices_and_answer_from_ai(player_in_world):
+    pass
+
 def game_start_user_inputs():
     num_of_players = None
     while num_of_players is None:
@@ -117,12 +131,6 @@ def get_player_color_by_number(player_number):
         player_color = PLAYER4_COLOR
 
     return player_color
-
-def get_map_background_for_world(current_world):
-    background_file_name = "background_world" + str(current_world) + ".png"
-    background_file_path = os.path.join(WORLDS_BACKGROUNDS_LOCATION,background_file_name)
-
-    return background_file_path
 
 def get_square_color_by_location_number(current_world,location_number):
     square_color = tuple[int, int, int]
@@ -186,6 +194,12 @@ def get_square_icon_by_color(color):
         icon = arcade.Sprite(TURBO_LOCATION_ICON_FILE_PATH)
 
     return icon
+
+def get_map_background_for_world(current_world):
+    background_file_name = "background_world" + str(current_world) + ".png"
+    background_file_path = os.path.join(WORLDS_BACKGROUNDS_LOCATION,background_file_name)
+
+    return background_file_path
 
 def get_players_in_world(current_world,players):
     players_in_current_world = []
