@@ -5,8 +5,6 @@ import os
 import time
 import random
 
-from arcade.examples.minimap import MAP_HEIGHT
-
 PATH_BASE = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(PATH_BASE,'data')
 IMG_PATH = os.path.join(DATA_PATH,'img')
@@ -18,6 +16,7 @@ SCREEN_WIDTH = 1300
 SCREEN_HEIGHT = 1000
 SCREEN_TITLE = "Voyage au centre de la galaxie"
 MAIN_MENU_BACKGROUND_FILE_PATH = os.path.join(WORLDS_BACKGROUNDS_LOCATION,'main.png')
+
 USE_ITEM_INVENTORY_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'inventory.png')
 END_TURN_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'end_turn.png')
 
@@ -40,27 +39,37 @@ WORLD_3_NUMBER_OF_ROWS = int(WORLD_3_NUMBER_OF_LOCATIONS / COLUMNS_IN_A_WORLD)
 WORLD_1_MALUS_LOCATIONS = [3,4,7,15,19,23,24,27]
 WORLD_1_MERCHANT_LOCATIONS = [10,20,29]
 WORLD_1_QUESTION_LOCATIONS = [2,5,11,12,13,16,18,21,25,26]
-WORLD_1_NEUTRAL_LOCATIONS = [1,6,8,9,14,17,22,28,30]
+WORLD_1_NEUTRAL_LOCATIONS = [1,6,17]
+WORLD_1_HAZARD_LOCATIONS = [8,14,28,30]
+WORLD_1_TURBO_LOCATIONS = [9,22]
 
 WORLD_2_MALUS_LOCATIONS = [3,8,11,14,17,23,24,27,32,35]
 WORLD_2_MERCHANT_LOCATIONS = [10,20,30,39]
 WORLD_2_QUESTION_LOCATIONS = [2,4,5,6,9,12,15,18,19,22,26,29,33,36,38]
-WORLD_2_NEUTRAL_LOCATIONS = [1,7,13,16,21,25,28,31,34,37,40]
+WORLD_2_NEUTRAL_LOCATIONS = [1,21,31,37]
+WORLD_2_HAZARD_LOCATIONS = [7,16,25,34]
+WORLD_2_TURBO_LOCATIONS = [13,28,40]
 
 WORLD_3_MALUS_LOCATIONS = [3,4,7,11,14,19,21,24,32,38,41,43,44,45,47,49]
 WORLD_3_MERCHANT_LOCATIONS = [10,15,25,40]
 WORLD_3_QUESTION_LOCATIONS = [5,6,8,9,12,13,16,18,20,22,26,28,30,33,34,35,37]
-WORLD_3_NEUTRAL_LOCATIONS = [1,2,16,17,23,27,29,31,36,39,42,46,48,50]
+WORLD_3_NEUTRAL_LOCATIONS = [1,23,29,36,50]
+WORLD_3_HAZARD_LOCATIONS = [2,17,27,39,46,48]
+WORLD_3_TURBO_LOCATIONS = [16,31,42]
 
 MALUS_LOCATION_COLOR = arcade.color.RED
 MERCHANT_LOCATION_COLOR = arcade.color.BLUE
 QUESTION_LOCATION_COLOR = arcade.color.GREEN
 NEUTRAL_LOCATION_COLOR = arcade.color.WHITE
+HAZARD_LOCATION_COLOR = arcade.color.YELLOW
+TURBO_LOCATION_COLOR = arcade.color.ELECTRIC_CYAN
 
 MALUS_LOCATION_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'malus.png')
 MERCHANT_LOCATION_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'merchant.png')
 QUESTION_LOCATION_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'question.png')
 NEUTRAL_LOCATION_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'neutral.png')
+HAZARD_LOCATION_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'hazard.png')
+TURBO_LOCATION_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'turbo.png')
 
 PLAYER1_COLOR = arcade.color.RICH_ELECTRIC_BLUE
 PLAYER2_COLOR = arcade.color.AMETHYST
@@ -125,6 +134,10 @@ def get_square_color_by_location_number(current_world,location_number):
             square_color = QUESTION_LOCATION_COLOR
         elif location_number in WORLD_1_NEUTRAL_LOCATIONS:
             square_color = NEUTRAL_LOCATION_COLOR
+        elif location_number in WORLD_1_HAZARD_LOCATIONS:
+            square_color = HAZARD_LOCATION_COLOR
+        elif location_number in WORLD_1_TURBO_LOCATIONS:
+            square_color = TURBO_LOCATION_COLOR
 
     elif current_world == 2:
         if location_number in WORLD_2_MALUS_LOCATIONS:
@@ -135,6 +148,10 @@ def get_square_color_by_location_number(current_world,location_number):
             square_color = QUESTION_LOCATION_COLOR
         elif location_number in WORLD_2_NEUTRAL_LOCATIONS:
             square_color = NEUTRAL_LOCATION_COLOR
+        elif location_number in WORLD_2_HAZARD_LOCATIONS:
+            square_color = HAZARD_LOCATION_COLOR
+        elif location_number in WORLD_2_TURBO_LOCATIONS:
+            square_color = TURBO_LOCATION_COLOR
 
     elif current_world == 3:
         if location_number in WORLD_3_MALUS_LOCATIONS:
@@ -145,8 +162,28 @@ def get_square_color_by_location_number(current_world,location_number):
             square_color = QUESTION_LOCATION_COLOR
         elif location_number in WORLD_3_NEUTRAL_LOCATIONS:
             square_color = NEUTRAL_LOCATION_COLOR
+        elif location_number in WORLD_3_HAZARD_LOCATIONS:
+            square_color = HAZARD_LOCATION_COLOR
+        elif location_number in WORLD_3_TURBO_LOCATIONS:
+            square_color = TURBO_LOCATION_COLOR
 
     return square_color
+
+def get_square_icon_by_color(color):
+    if color == (255, 0, 0, 175):
+        icon = arcade.Sprite(MALUS_LOCATION_ICON_FILE_PATH)
+    elif color == (0, 0, 255, 175):
+        icon = arcade.Sprite(MERCHANT_LOCATION_ICON_FILE_PATH)
+    elif color == (0, 255, 0, 175):
+        icon = arcade.Sprite(QUESTION_LOCATION_ICON_FILE_PATH)
+    elif color == (255, 255, 255, 175):
+        icon = arcade.Sprite(NEUTRAL_LOCATION_ICON_FILE_PATH)
+    elif color == (255, 255, 0, 175):
+        icon = arcade.Sprite(HAZARD_LOCATION_ICON_FILE_PATH)
+    elif color == (0, 255, 255, 175):
+        icon = arcade.Sprite(TURBO_LOCATION_ICON_FILE_PATH)
+
+    return icon
 
 def get_players_in_world(current_world,players):
     players_in_current_world = []
@@ -294,24 +331,17 @@ class Game(arcade.Window):
         for row in range(len(self.board)):
             for column in range(COLUMNS_IN_A_WORLD):
                 color = (*self.board[row][column], 175)
-                if color == (255, 0, 0, 175):
-                    icon = arcade.Sprite(MALUS_LOCATION_ICON_FILE_PATH)
-                elif color == (0, 0, 255, 175):
-                    icon = arcade.Sprite(MERCHANT_LOCATION_ICON_FILE_PATH)
-                elif color == (0, 255, 0, 175):
-                    icon = arcade.Sprite(QUESTION_LOCATION_ICON_FILE_PATH)
-                elif color == (255, 255, 255, 175):
-                    icon = arcade.Sprite(NEUTRAL_LOCATION_ICON_FILE_PATH)
+                icon = get_square_icon_by_color(color)
 
                 x = column * self.square_width + (self.square_width / 2)
                 y = SCREEN_HEIGHT - (row * self.square_height + (self.square_height / 2))
                 arcade.draw_rectangle_filled(x, y, self.square_width, self.square_height, color)
                 arcade.draw_rectangle_outline(x, y, self.square_width+2.5, self.square_height+2.5, arcade.color.ELECTRIC_VIOLET, border_width=5)
+
                 icon_x = x - (self.square_width / 2) + 5
                 icon_y = y + (self.square_height / 2) - 5
                 icon.center_x = icon_x + icon.width / 2  # Add half the width of the icon to center it within that space
                 icon.center_y = icon_y - icon.height / 2  # Subtract half the height of the icon to center it within that space
-
                 icon.draw()
 
                 text_background_width = self.square_width / 4
