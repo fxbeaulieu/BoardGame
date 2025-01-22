@@ -85,9 +85,61 @@ END_TURN_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'end_turn.png')
 
 def get_items_from_db(number_of_items_to_get,player_in_world):
     db_connection = sqlite3.connect(ITEMS_DB_FILE_PATH)
+    db_connection.row_factory = sqlite3.Row
+    db_cursor = db_connection.cursor()
+
+    class Item:
+        def __init__(self,name,cost,targets,effect):
+            self.name = name
+            self.cost = cost
+            self.targets = targets
+            self.effect = effect
+
+    db_cursor.execute('SELECT * FROM items WHERE item_avail_in_world=?', (player_in_world,))
+    items_in_current_world_data = db_cursor.fetchall()
+    items_for_current_world = []
+    randomly_selected_items = []
+    for item in items_in_current_world_data:
+        item_name = item[1]
+        item_cost = item[2]
+        item_target = item[3]
+        item_effect = item[4]
+        current_item = Item(item_name,item_cost,item_target,item_effect)
+        items_for_current_world.append(current_item)
+
+    for _ in range(number_of_items_to_get):
+        randomly_selected_item = random.choice(items_for_current_world)
+        randomly_selected_items.append(randomly_selected_item)
+
+    return randomly_selected_items
 
 def get_malus_from_db(player_in_world):
     db_connection = sqlite3.connect(MALUS_DB_FILE_PATH)
+    db_connection.row_factory = sqlite3.Row
+    db_cursor = db_connection.cursor()
+
+    class Malus:
+        def __init__(self,name,targets,effect,takes_effect):
+            self.name = name
+            self.targets = targets
+            self.effect = effect
+            self.takes_effect = takes_effect
+
+    db_cursor.execute('SELECT * FROM malus WHERE malus_in_world=?',(player_in_world,))
+    malus_in_current_world_data = db_cursor.fetchall()
+    malus_for_current_world = []
+    for malus in malus_in_current_world_data:
+        malus_name = malus[1]
+        malus_targets = malus[2]
+        malus_effect = malus[3]
+        malus_takes_effect = malus[5]
+
+        current_malus = Malus(malus_name,malus_targets,malus_effect,malus_takes_effect)
+        malus_for_current_world.append(current_malus)
+
+    randomly_selected_malus = random.choice(malus_for_current_world)
+
+    return randomly_selected_malus
 
 def get_question_with_choices_and_answer_from_ai(player_in_world):
     pass
@@ -276,6 +328,26 @@ class Game(arcade.Window):
 
         self.player_turn = 1
 
+    def calculate_sprite_position(self,player):
+        world_location = player.world_location
+
+        row = (world_location - 1) // COLUMNS_IN_A_WORLD
+        column = (world_location - 1) % COLUMNS_IN_A_WORLD
+
+        # Count how many players are in the same location
+        players_in_same_location = [player for player in self.players if player.world_location == world_location]
+        player_index = players_in_same_location.index(player)
+
+        # Calculate base position
+        x = column * self.square_width + (self.square_width / 2) - 20
+        y = SCREEN_HEIGHT - (row * self.square_height + (self.square_height / 2))
+
+        # Offset position based on index
+        x += player_index * SPRITE_OFFSET_X
+        y += player_index * SPRITE_OFFSET_Y
+
+        return x, y
+
     def update_map(self, world):
         # Determine the number of rows based on the current world
         if world == 1:
@@ -286,6 +358,7 @@ class Game(arcade.Window):
             rows = WORLD_3_NUMBER_OF_ROWS
         else:
             raise ValueError("Invalid world number")
+        self.square_height = SCREEN_HEIGHT // rows
 
         # Create a new board with the correct number of squares
         self.board = []
@@ -294,6 +367,13 @@ class Game(arcade.Window):
             for column in range(COLUMNS_IN_A_WORLD):
                 location_number = row * COLUMNS_IN_A_WORLD + column + 1
                 self.board[row].append(get_square_color_by_location_number(world, location_number))
+        for player in self.players:
+            if player.current_world == self.current_world:  # Only draw the sprite if the player is in the current world
+                player.player_sprite.center_x, player.player_sprite.center_y = self.calculate_sprite_position(player)
+            else:
+                player.player_sprite.center_x, player.player_sprite.center_y = -100, -100  # Move the sprite off-screen
+
+        self.player_sprites.draw()
 
         # Update the background
         self.background = arcade.load_texture(get_map_background_for_world(world))
@@ -368,26 +448,6 @@ class Game(arcade.Window):
             if i < len(self.player_names) - 1:  # Don't draw a line after the last player's information
                 arcade.draw_line(MAP_WIDTH + 10, y - 115, SCREEN_WIDTH - 10, y - 115, arcade.color.ELECTRIC_VIOLET, 2)
 
-        def calculate_sprite_position(player):
-            world_location = player.world_location
-
-            row = (world_location - 1) // COLUMNS_IN_A_WORLD
-            column = (world_location - 1) % COLUMNS_IN_A_WORLD
-
-            # Count how many players are in the same location
-            players_in_same_location = [player for player in self.players if player.world_location == world_location]
-            player_index = players_in_same_location.index(player)
-
-            # Calculate base position
-            x = column * self.square_width + (self.square_width / 2) - 20
-            y = SCREEN_HEIGHT - (row * self.square_height + (self.square_height / 2))
-
-            # Offset position based on index
-            x += player_index * SPRITE_OFFSET_X
-            y += player_index * SPRITE_OFFSET_Y
-
-            return x, y
-
         def calculate_dice_sprite_position():
             x = MAP_WIDTH + (SIDEBAR_WIDTH // 4)
             y = BOTTOM_BAR_HEIGHT // 2
@@ -408,7 +468,7 @@ class Game(arcade.Window):
 
         for player in self.players:
             if player.current_world == self.current_world:  # Only draw the sprite if the player is in the current world
-                player.player_sprite.center_x, player.player_sprite.center_y = calculate_sprite_position(player)
+                player.player_sprite.center_x, player.player_sprite.center_y = self.calculate_sprite_position(player)
             else:
                 player.player_sprite.center_x, player.player_sprite.center_y = -100, -100  # Move the sprite off-screen
         self.player_sprites.draw()
@@ -431,6 +491,85 @@ class Game(arcade.Window):
             self.text_visibility = not self.text_visibility
             self.start_time = time.time()
 
+    def manage_merchant_interaction(self,player_id,items):
+        purchased_items = []
+        for player in self.players:
+            if player.player_id == player_id:
+                player_amount_of_dollbran = player.current_dollbran_amount
+                break
+
+        #Draw and click functions
+
+        selected_item = int()
+        item = items[selected_item]
+        if player_amount_of_dollbran >= item.cost:
+            player_amount_of_dollbran -= item.cost
+            for player in self.players:
+                if player.player_id == player_id:
+                    player.current_dollbran_amount = player_amount_of_dollbran
+                    break
+            purchased_items.append(item)
+
+        for item in purchased_items:
+            for player in self.players:
+                if player.player_id == player_id:
+                    player.currently_held_items.append(item)
+
+        return purchased_items
+
+    def manage_malus_effect(self,player_id,malus):
+        #if malus.takes_effect == 'immed':
+        #    pass
+        #elif malus.takes_effect.startswith('future'):
+            pass
+
+    def manage_square_effect(self,current_player,color_of_square):
+        player_id = current_player.player_id
+        if color_of_square == (255, 0, 0):
+            #square_type = 'malus'
+            #malus = get_malus_from_db(current_player.current_world)
+            #self.manage_malus_effect(player_id,malus)
+            pass
+
+        elif color_of_square == (0, 0, 255):
+            #square_type = 'merchant'
+            items = get_items_from_db(3,current_player.current_world)
+            purchased_items = self.manage_merchant_interaction(player_id,items)
+
+        elif color_of_square == (0, 255, 0):
+            #square_type = 'question'
+            #get_question_with_choices_and_answer_from_ai(current_player.current_world)
+            pass
+
+        elif color_of_square == (255, 255, 255):
+            #square_type = 'neutral'
+            pass
+
+        elif color_of_square == (255, 255, 0):
+            #square_type = 'hazard'
+            #type_of_hazard = random.randint(0,1)
+            #if type_of_hazard == 0:
+            #    malus = get_malus_from_db(current_player.current_world)
+            #    self.manage_malus_effect()
+
+            #elif type_of_hazard == 1:
+            #    item = get_items_from_db(1,current_player.current_world)[0]
+            #    for player in self.players:
+            #        if player.player_id == player_id:
+            #            player.currently_held_items.append(item)
+            #            break
+            pass
+
+        elif color_of_square == (0, 255, 255):
+            #square_type = 'turbo'
+            for player in self.players:
+                if player.player_id == player_id:
+                    player.number_of_dice_rolls_next_turn += 1
+                    break
+
+    def item_used(self):
+        pass
+
     def roll_dice(self):
         dice_number = random.randint(1, 6)  # Generate a random number between 1 and 6
         self.dice_sprite = self.dice_sprites[dice_number]  # Update the dice sprite
@@ -440,6 +579,8 @@ class Game(arcade.Window):
 
         # Update the player's location
         current_player.world_location += dice_number
+        current_player_on_type_of_square = get_square_color_by_location_number(current_player.current_world,current_player.world_location)
+        self.manage_square_effect(current_player,current_player_on_type_of_square)
 
         # If player's location exceeds the maximum location in the world, move to next world or end game
         if current_player.current_world == 1 and current_player.world_location > WORLD_1_NUMBER_OF_LOCATIONS:
@@ -473,7 +614,7 @@ class Game(arcade.Window):
             self.player_turn += 1
 
         active_player = self.players[self.player_turn - 1]
-
+        self.current_world = active_player.current_world
         self.update_map(active_player.current_world)
 
     def on_key_press(self, key, key_modifiers):
