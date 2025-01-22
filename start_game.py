@@ -13,12 +13,15 @@ DATA_PATH = os.path.join(PATH_BASE,'data')
 IMG_PATH = os.path.join(DATA_PATH,'img')
 DB_PATH = os.path.join(DATA_PATH,'db')
 WORLDS_BACKGROUNDS_LOCATION = os.path.join(IMG_PATH,'backgrounds')
+EFFECTS_BACKGROUNDS_LOCATION = os.path.join(WORLDS_BACKGROUNDS_LOCATION,'effects')
+EFFECTS_WORLD_1_BACKGROUNDS_LOCATION = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'world1')
+EFFECTS_WORLD_2_BACKGROUNDS_LOCATION = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'world2')
+EFFECTS_WORLD_3_BACKGROUNDS_LOCATION = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'world3')
 SPRITES_LOCATION = os.path.join(IMG_PATH,'sprites')
 
 SCREEN_WIDTH = 1300
 SCREEN_HEIGHT = 1000
 SCREEN_TITLE = "Voyage au centre de la galaxie"
-MAIN_MENU_BACKGROUND_FILE_PATH = os.path.join(WORLDS_BACKGROUNDS_LOCATION,'main.png')
 ITEMS_DB_FILE_PATH=os.path.join(DB_PATH,'items.db')
 MALUS_DB_FILE_PATH=os.path.join(DB_PATH,'malus.db')
 
@@ -55,7 +58,7 @@ WORLD_2_HAZARD_LOCATIONS = [7,16,25,34]
 WORLD_2_TURBO_LOCATIONS = [13,28,40]
 
 WORLD_3_MALUS_LOCATIONS = [3,4,7,11,14,19,21,24,32,38,41,43,44,45,47,49]
-WORLD_3_MERCHANT_LOCATIONS = [10,15,25,40]
+WORLD_3_MERCHANT_LOCATIONS = [10,20,30,40]
 WORLD_3_QUESTION_LOCATIONS = [5,6,8,9,12,13,16,18,20,22,26,28,30,33,34,35,37]
 WORLD_3_NEUTRAL_LOCATIONS = [1,23,29,36,50]
 WORLD_3_HAZARD_LOCATIONS = [2,17,27,39,46,48]
@@ -491,6 +494,12 @@ class Game(arcade.Window):
             self.text_visibility = not self.text_visibility
             self.start_time = time.time()
 
+    def roll_dice_if_allowed(self):
+        active_player = self.players[self.player_turn - 1]
+        if active_player.number_of_dice_rolls_next_turn > 0:
+            dice_number = self.roll_dice()  # Roll the dice
+            active_player.number_of_dice_rolls_next_turn -= 1
+
     def manage_merchant_interaction(self,player_id,items):
         purchased_items = []
         for player in self.players:
@@ -529,42 +538,56 @@ class Game(arcade.Window):
             #square_type = 'malus'
             #malus = get_malus_from_db(current_player.current_world)
             #self.manage_malus_effect(player_id,malus)
-            pass
+            easygui.msgbox(
+                "Vous êtes sur une case de malus... oups... voyons voir ce que le mauvais sort vous réserve...",
+                title="Case de Malus")
 
         elif color_of_square == (0, 0, 255):
             #square_type = 'merchant'
             items = get_items_from_db(3,current_player.current_world)
-            purchased_items = self.manage_merchant_interaction(player_id,items)
+            easygui.msgbox("Vous êtes sur une case de marchand, vous pouvez échanger vos Dollbrans pour des objets qui peuvent vous aider dans votre aventure.",
+                           title="Case de Marchand")
 
         elif color_of_square == (0, 255, 0):
             #square_type = 'question'
             #get_question_with_choices_and_answer_from_ai(current_player.current_world)
-            pass
+            easygui.msgbox("Vous êtes sur une case de question... voyons voir si vous méritez quelques dollbrans !",
+                           title="Case de Question")
 
         elif color_of_square == (255, 255, 255):
             #square_type = 'neutral'
-            pass
+            easygui.msgbox("Vous êtes sur une case neutre, vous campez pour passer la nuit !",
+                           title="Case Neutre")
 
         elif color_of_square == (255, 255, 0):
             #square_type = 'hazard'
-            #type_of_hazard = random.randint(0,1)
-            #if type_of_hazard == 0:
+            type_of_hazard = random.randint(0,1)
+            if type_of_hazard == 0:
             #    malus = get_malus_from_db(current_player.current_world)
             #    self.manage_malus_effect()
-
-            #elif type_of_hazard == 1:
+                easygui.msgbox("Vous êtes sur une case de hasard... ça peut être positif ou négatif...",
+                           title="Case de Hasard")
+                easygui.msgbox("C'est positif !!! Voyons voir quel trésor vous avez obtenu !",
+                           title="Case de Hasard")
+            elif type_of_hazard == 1:
             #    item = get_items_from_db(1,current_player.current_world)[0]
             #    for player in self.players:
             #        if player.player_id == player_id:
             #            player.currently_held_items.append(item)
             #            break
-            pass
+                easygui.msgbox("Vous êtes sur une case de hasard... ça peut être positif ou négatif...",
+                           title="Case de Hasard")
+                easygui.msgbox("C'est négatif... oups... voyons voir ce que le mauvais sort vous réserve...",
+                           title="Case de Hasard")
 
         elif color_of_square == (0, 255, 255):
             #square_type = 'turbo'
             for player in self.players:
                 if player.player_id == player_id:
                     player.number_of_dice_rolls_next_turn += 1
+                    easygui.msgbox("Vous êtes sur une case turbo, vous avez un lancer de dé supplémentaire !",
+                                   title="Case Turbo")
+                    self.roll_dice_if_allowed()
                     break
 
     def item_used(self):
@@ -580,7 +603,6 @@ class Game(arcade.Window):
         # Update the player's location
         current_player.world_location += dice_number
         current_player_on_type_of_square = get_square_color_by_location_number(current_player.current_world,current_player.world_location)
-        self.manage_square_effect(current_player,current_player_on_type_of_square)
 
         # If player's location exceeds the maximum location in the world, move to next world or end game
         if current_player.current_world == 1 and current_player.world_location > WORLD_1_NUMBER_OF_LOCATIONS:
@@ -599,7 +621,10 @@ class Game(arcade.Window):
 
         elif current_player.current_world == 3 and current_player.world_location > WORLD_3_NUMBER_OF_LOCATIONS:
             # End game or wrap around to first world, depending on your game rules
-            pass
+            current_player.world_location = WORLD_3_NUMBER_OF_LOCATIONS
+            self.update_map(self.current_world)
+
+        self.manage_square_effect(current_player,current_player_on_type_of_square)
 
         return dice_number
 
@@ -647,9 +672,8 @@ class Game(arcade.Window):
 
         if self.dice_sprite.collides_with_point((x, y)):  # If the player clicks on the dice sprite
             if number_of_clicks_allowed_on_dice > 0:
-                dice_number = self.roll_dice()  # Roll the dice
-                number_of_clicks_allowed_on_dice -= 1
-                self.players[self.player_turn - 1].number_of_dice_rolls_next_turn = number_of_clicks_allowed_on_dice
+                self.roll_dice_if_allowed()
+
             else:
                 pass
 
