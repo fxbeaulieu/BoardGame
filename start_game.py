@@ -82,6 +82,8 @@ PLAYER4_COLOR = arcade.color.MEDIUM_VERMILION
 
 USE_ITEM_INVENTORY_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'inventory.png')
 END_TURN_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'end_turn.png')
+CURRENCY_SPRITE_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'dollbran.png')
+CURRENCY_SPRITE = arcade.Sprite(CURRENCY_SPRITE_ICON_FILE_PATH)
 
 def get_items_from_db(number_of_items_to_get,player_in_world):
     db_connection = sqlite3.connect(ITEMS_DB_FILE_PATH)
@@ -445,9 +447,14 @@ class Game(arcade.Window):
                 arcade.draw_text(player_name_text, MAP_WIDTH + 15, y, get_player_color_by_number(i), 18, bold=True)
 
             padding = 25
-            second_text_x = MAP_WIDTH + 15 + first_text_width + padding
-            arcade.draw_text(f"{self.players[i].current_dollbran_amount} Dollbrans", second_text_x, y, arcade.color.GOLD, 12, bold=True)
-            arcade.draw_text(f"Items: {''.join(self.players[i].currently_held_items)}", MAP_WIDTH + 15, y - 25, arcade.color.WHITE, 12)
+            second_text_x = MAP_WIDTH + 30 + first_text_width + padding
+            dollbran_amount_text = f"{self.players[i].current_dollbran_amount}"
+            arcade.draw_text(dollbran_amount_text, second_text_x, y, arcade.color.GOLD, 14, bold=True)
+            dollbran_amount_text_width = len(dollbran_amount_text) * 14  # Change the multiplier based on your font size
+            CURRENCY_SPRITE.center_x = second_text_x + dollbran_amount_text_width + 42
+            CURRENCY_SPRITE.center_y = y + 7
+            CURRENCY_SPRITE.draw()
+            arcade.draw_text(f"Items: {''.join(self.players[i].currently_held_items)}", MAP_WIDTH + 15, y - 28, arcade.color.WHITE, 12)
             arcade.draw_text(f"Malus actifs: {''.join(self.players[i].currently_affected_by_malus)}", MAP_WIDTH + 15, y - 70, arcade.color.ELECTRIC_GREEN, 12)
             arcade.draw_text(f"Bonus actifs: {''.join(self.players[i].currently_affected_by_bonus)}", MAP_WIDTH + 15, y - 90, arcade.color.ELECTRIC_CRIMSON, 12)
 
