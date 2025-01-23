@@ -14,9 +14,6 @@ IMG_PATH = os.path.join(DATA_PATH,'img')
 DB_PATH = os.path.join(DATA_PATH,'db')
 WORLDS_BACKGROUNDS_LOCATION = os.path.join(IMG_PATH,'backgrounds')
 EFFECTS_BACKGROUNDS_LOCATION = os.path.join(WORLDS_BACKGROUNDS_LOCATION,'effects')
-EFFECTS_WORLD_1_BACKGROUNDS_LOCATION = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'world1')
-EFFECTS_WORLD_2_BACKGROUNDS_LOCATION = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'world2')
-EFFECTS_WORLD_3_BACKGROUNDS_LOCATION = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'world3')
 SPRITES_LOCATION = os.path.join(IMG_PATH,'sprites')
 
 SCREEN_WIDTH = 1300
@@ -174,6 +171,13 @@ def get_player_sprite(player_number):
     sprite_file_path = os.path.join(SPRITES_LOCATION,sprite_file_name)
 
     return sprite_file_path
+
+def get_effect_background_file(current_world,type_of_effect,name_of_effect):
+    first_level_directory_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,str("world"+str(current_world)))
+    second_level_directory_path = os.path.join(first_level_directory_path,type_of_effect)
+    effect_background_path = os.path.join(second_level_directory_path,str(str(name_of_effect)+".png"))
+
+    return effect_background_path
 
 def get_player_color_by_number(player_number):
     if player_number == 0:
@@ -534,59 +538,72 @@ class Game(arcade.Window):
 
     def manage_square_effect(self,current_player,color_of_square):
         player_id = current_player.player_id
+
         if color_of_square == (255, 0, 0):
             #square_type = 'malus'
+            malus_background_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'malus.png')
             #malus = get_malus_from_db(current_player.current_world)
             #self.manage_malus_effect(player_id,malus)
             easygui.msgbox(
                 "Vous êtes sur une case de malus... oups... voyons voir ce que le mauvais sort vous réserve...",
-                title="Case de Malus")
+                title="Case de Malus",ok_button="Voir le malus",image=malus_background_image_file_path)
 
         elif color_of_square == (0, 0, 255):
             #square_type = 'merchant'
+            if current_player.current_world == 1:
+                merchant_background_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'merchant_world1.png')
+            else:
+                merchant_background_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'merchant_world2-3.png')
+
             items = get_items_from_db(3,current_player.current_world)
             easygui.msgbox("Vous êtes sur une case de marchand, vous pouvez échanger vos Dollbrans pour des objets qui peuvent vous aider dans votre aventure.",
-                           title="Case de Marchand")
+                           title="Case de Marchand",ok_button="Voir les objets en vente",image=merchant_background_image_file_path)
 
         elif color_of_square == (0, 255, 0):
             #square_type = 'question'
+            question_background_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'question.png')
             #get_question_with_choices_and_answer_from_ai(current_player.current_world)
             easygui.msgbox("Vous êtes sur une case de question... voyons voir si vous méritez quelques dollbrans !",
-                           title="Case de Question")
+                           title="Case de Question",ok_button="Voir la question et le choix de réponses",image=question_background_image_file_path)
 
         elif color_of_square == (255, 255, 255):
             #square_type = 'neutral'
-            easygui.msgbox("Vous êtes sur une case neutre, vous campez pour passer la nuit !",
-                           title="Case Neutre")
+            neutral_background_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'neutral.png')
+            easygui.msgbox("Vous êtes sur une case neutre, un peu de repos ne fait jamais de tord !",
+                           title="Case Neutre",ok_button="Chilling",image=neutral_background_image_file_path)
 
         elif color_of_square == (255, 255, 0):
             #square_type = 'hazard'
+            hazard_background_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'hazard.png')
+            easygui.msgbox("Vous êtes sur une case de hasard... ça peut être positif ou négatif...",
+                           title="Case de Hasard", ok_button="Voir ce que le hasard vous réserve",image=hazard_background_image_file_path)
             type_of_hazard = random.randint(0,1)
+
             if type_of_hazard == 0:
-            #    malus = get_malus_from_db(current_player.current_world)
-            #    self.manage_malus_effect()
-                easygui.msgbox("Vous êtes sur une case de hasard... ça peut être positif ou négatif...",
-                           title="Case de Hasard")
-                easygui.msgbox("C'est positif !!! Voyons voir quel trésor vous avez obtenu !",
-                           title="Case de Hasard")
+                malus_background_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION, 'malus.png')
+                #    malus = get_malus_from_db(current_player.current_world)
+                #    self.manage_malus_effect()
+                easygui.msgbox("C'est négatif... oups... voyons voir ce que le mauvais sort vous réserve...",
+                           title="Résultat de la case de hasard",ok_button="Voir le malus",image=malus_background_image_file_path)
+
             elif type_of_hazard == 1:
+                item_found_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION, 'bonus_item.png')
             #    item = get_items_from_db(1,current_player.current_world)[0]
             #    for player in self.players:
             #        if player.player_id == player_id:
             #            player.currently_held_items.append(item)
             #            break
-                easygui.msgbox("Vous êtes sur une case de hasard... ça peut être positif ou négatif...",
-                           title="Case de Hasard")
-                easygui.msgbox("C'est négatif... oups... voyons voir ce que le mauvais sort vous réserve...",
-                           title="Case de Hasard")
+                easygui.msgbox("C'est positif !!! Voyons voir quel trésor vous avez obtenu !",
+                           title="Résultat de la case de hasard",ok_button="Voir l'objet trouvé",image=item_found_image_file_path)
 
         elif color_of_square == (0, 255, 255):
             #square_type = 'turbo'
+            turbo_background_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION, 'turbo.png')
             for player in self.players:
                 if player.player_id == player_id:
                     player.number_of_dice_rolls_next_turn += 1
                     easygui.msgbox("Vous êtes sur une case turbo, vous avez un lancer de dé supplémentaire !",
-                                   title="Case Turbo")
+                                   title="Case Turbo",ok_button="Lancer le dé supplémentaire")
                     self.roll_dice_if_allowed()
                     break
 
