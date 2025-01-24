@@ -1,0 +1,33 @@
+malus_id,malus_name,malus_targets,malus_effect,malus_in_world,malus_takes_effect
+1,Vous passez dans un marécage,self,Divise le résultat du dé lors de ton prochain tour en deux,1,next_turn
+2,Vous trouvez une vidéo de Polo,self,Passez votre prochain tour,1,next_turn
+3,Vous marchez sur une crotte de chien,self,"Choisi un de tes objets du marchand, tu perd cet objet",1,immed
+4,Un éboulement se produit sur votre chemin,self,Reculez de deux cases,1,immed
+5,Vous êtes en colle après l'école,self,Passez votre prochain tour,1,next_turn
+6,Un blessure au genou vous ralentit,self,Passez vos deux prochains tours,1,next_two_turns
+7,Vous tombez dans une bouche d'égout,self,Reculez de trois cases,1,immed
+8,Vous êtes pris dans une tentative de vol,self,"Lors de ton prochain achat chez un marchand, l'objet sera à prix double",1,until_next_merchant
+9,Vous trébuchez et faites trébucher les autres joueurs,all_players,Tous les joueurs perdent 5 Dollbran,1,immed
+10,Une bande de bandits vous surprend sur la route,self_and_two_other_players,"Vous perdez 10 Dollbran et les deux autres joueurs font un « roche/papier/ciseaux », le perdant perd également 10 Dollbran.",1,immed
+11,Une carte avec de mauvaises indications vous envoie dans un manoir hanté,self,Passez vos deux prochains tours,1,next_two_turns
+12,Vous êtes intercepté par une troupe d'extraterrestre,self,Passez vos deux prochains tours,2,next_two_turns
+13,Votre vaisseau à un bris de matériel,self,Vous reculez de 5 cases,2,immed
+14,Votre vaisseau manque d'oxygène,self,Retourne à la première case du monde,2,immed
+15,Vous passez trop près du Soleil,self,Vous reculez de 4 cases,2,immed
+16,Vous entrez en collision avec un astéroide,self,Passez votre prochain tour,2,next_turn
+17,Un signal de détresse est reçu de Mars,self,Retournez à la 10e case,2,immed
+18,Votre vaisseau s'échoue sur une lune lointaine,self,Passez votre prochain tour,2,next_turn
+19,Les moteurs de votre vaisseau sont endommagés,self,"Lors de votre prochain tour, vous reculez du nombre indiqué sur votre dé",2,next_turn
+20,Un extraterrestre vole votre vaisseau,self,Choisissez deux objets que vous perdez,2,immed
+21,Vous manquez de distractions sur votre vaisseau,self,Passez votre prochain tour,2,next_turn
+22,Vous avez mal lu votre tableau de bord,self,Reculez de deux cases,2,immed
+23,Ta porte de vaisseau s'ouvre par erreur,self,Choisi 3 objets que tu perd,3,immed
+24,Tombe dans un trou noir supermassif,all_players,Tous les joueurs retournent à la première case du monde,3,immed
+25,Tombe dans un trou noir stellaire,self,Recule de 10 cases,3,immed
+26,Tu trébuches sur tes outils,self,Choisi un objet que tu perd,3,immed
+27,Éjecté de ton vaisseau,self,Recule de 5 cases,3,immed
+28,Tu échappes tes objets hors de ton vaisseau,self_and_all_other_players,Tous les autres joueurs te volent un objet,3,immed
+29,Coincé dans une bataille spatiale,self,Passe 2 tours,3,next_two_turns
+30,Tes robots malfonctionnent,self,Choisi un objet que tu perd et passe ton prochain tour,3,immed_and_next_turn
+31,Un débris perce la coque de ton vaisseau,self,Perd 10 Dollbran,3,immed
+32,Ton ordinateur de navigation n'est pas à jour,self,Recule de 3 cases,3,immed
