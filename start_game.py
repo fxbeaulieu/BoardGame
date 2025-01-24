@@ -121,11 +121,12 @@ def get_malus_from_db(player_in_world):
     db_cursor = db_connection.cursor()
 
     class Malus:
-        def __init__(self,name,targets,effect,takes_effect):
+        def __init__(self,name,targets,effect,takes_effect,sprite_file_name):
             self.name = name
             self.targets = targets
             self.effect = effect
             self.takes_effect = takes_effect
+            self.sprite = get_effect_background_file(player_in_world,'malus',sprite_file_name)
 
     db_cursor.execute('SELECT * FROM malus WHERE malus_in_world=?',(player_in_world,))
     malus_in_current_world_data = db_cursor.fetchall()
@@ -135,8 +136,9 @@ def get_malus_from_db(player_in_world):
         malus_targets = malus[2]
         malus_effect = malus[3]
         malus_takes_effect = malus[5]
+        malus_image_file_name = malus[6]
 
-        current_malus = Malus(malus_name,malus_targets,malus_effect,malus_takes_effect)
+        current_malus = Malus(malus_name,malus_targets,malus_effect,malus_takes_effect,malus_image_file_name)
         malus_for_current_world.append(current_malus)
 
     randomly_selected_malus = random.choice(malus_for_current_world)
@@ -538,10 +540,20 @@ class Game(arcade.Window):
         return purchased_items
 
     def manage_malus_effect(self,player_id,malus):
-        #if malus.takes_effect == 'immed':
-        #    pass
-        #elif malus.takes_effect.startswith('future'):
+        if malus.takes_effect == 'immed':
             pass
+        else:
+            for player in self.players:
+                if player.player_id == player_id:
+                    player.currently_affected_by_malus.append(malus.name)
+            if malus.takes_effect == 'next_turn':
+                pass
+            elif malus.takes_effect == 'next_two_turns':
+                pass
+            elif malus.takes_effect == 'next_merchant':
+                pass
+            elif malus.takes_effect == 'immed_and_next_turn':
+                pass
 
     def manage_square_effect(self,current_player,color_of_square):
         player_id = current_player.player_id
@@ -549,11 +561,14 @@ class Game(arcade.Window):
         if color_of_square == (255, 0, 0):
             #square_type = 'malus'
             malus_background_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'malus.png')
-            #malus = get_malus_from_db(current_player.current_world)
-            #self.manage_malus_effect(player_id,malus)
             easygui.msgbox(
                 "Vous êtes sur une case de malus... oups... voyons voir ce que le mauvais sort vous réserve...",
                 title="Case de Malus",ok_button="Voir le malus",image=malus_background_image_file_path)
+            malus = get_malus_from_db(current_player.current_world)
+            self.manage_malus_effect(player_id,malus)
+            easygui.msgbox(
+                msg=str(malus.name+"\n"+malus.effect),title="Malus",image=malus.sprite
+            )
 
         elif color_of_square == (0, 0, 255):
             #square_type = 'merchant'
@@ -588,20 +603,23 @@ class Game(arcade.Window):
 
             if type_of_hazard == 0:
                 malus_background_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION, 'malus.png')
-                #    malus = get_malus_from_db(current_player.current_world)
-                #    self.manage_malus_effect()
                 easygui.msgbox("C'est négatif... oups... voyons voir ce que le mauvais sort vous réserve...",
                            title="Résultat de la case de hasard",ok_button="Voir le malus",image=malus_background_image_file_path)
+                malus = get_malus_from_db(current_player.current_world)
+                self.manage_malus_effect(player_id,malus)
+                easygui.msgbox(
+                    msg=str(malus.name + "\n" + malus.effect), title="Malus", image=malus.sprite
+                )
 
             elif type_of_hazard == 1:
                 item_found_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION, 'bonus_item.png')
-            #    item = get_items_from_db(1,current_player.current_world)[0]
-            #    for player in self.players:
-            #        if player.player_id == player_id:
-            #            player.currently_held_items.append(item)
-            #            break
                 easygui.msgbox("C'est positif !!! Voyons voir quel trésor vous avez obtenu !",
                            title="Résultat de la case de hasard",ok_button="Voir l'objet trouvé",image=item_found_image_file_path)
+                item = get_items_from_db(1,current_player.current_world)[0]
+                for player in self.players:
+                    if player.player_id == player_id:
+                        player.currently_held_items.append(item.name)
+                        break
 
         elif color_of_square == (0, 255, 255):
             #square_type = 'turbo'
@@ -610,7 +628,7 @@ class Game(arcade.Window):
                 if player.player_id == player_id:
                     player.number_of_dice_rolls_next_turn += 1
                     easygui.msgbox("Vous êtes sur une case turbo, vous avez un lancer de dé supplémentaire !",
-                                   title="Case Turbo",ok_button="Lancer le dé supplémentaire")
+                                   title="Case Turbo",ok_button="Lancer le dé supplémentaire",image=turbo_background_image_file_path)
                     self.roll_dice_if_allowed()
                     break
 
