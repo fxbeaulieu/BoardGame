@@ -91,11 +91,12 @@ def get_items_from_db(number_of_items_to_get,player_in_world):
     db_cursor = db_connection.cursor()
 
     class Item:
-        def __init__(self,name,cost,targets,effect):
+        def __init__(self,name,cost,targets,effect,sprite_file_name):
             self.name = name
             self.cost = cost
             self.targets = targets
             self.effect = effect
+            self.sprite = get_effect_background_file(player_in_world,'item',sprite_file_name)
 
     db_cursor.execute('SELECT * FROM items WHERE item_avail_in_world=?', (player_in_world,))
     items_in_current_world_data = db_cursor.fetchall()
@@ -106,7 +107,8 @@ def get_items_from_db(number_of_items_to_get,player_in_world):
         item_cost = item[2]
         item_target = item[3]
         item_effect = item[4]
-        current_item = Item(item_name,item_cost,item_target,item_effect)
+        item_image_file_name = item[5]
+        current_item = Item(item_name,item_cost,item_target,item_effect,item_image_file_name)
         items_for_current_world.append(current_item)
 
     for _ in range(number_of_items_to_get):
@@ -457,8 +459,8 @@ class Game(arcade.Window):
             CURRENCY_SPRITE.center_y = y + 7
             CURRENCY_SPRITE.draw()
             arcade.draw_text(f"Items: {''.join(self.players[i].currently_held_items)}", MAP_WIDTH + 15, y - 28, arcade.color.WHITE, 12)
-            arcade.draw_text(f"Malus actifs: {''.join(self.players[i].currently_affected_by_malus)}", MAP_WIDTH + 15, y - 70, arcade.color.ELECTRIC_GREEN, 12)
-            arcade.draw_text(f"Bonus actifs: {''.join(self.players[i].currently_affected_by_bonus)}", MAP_WIDTH + 15, y - 90, arcade.color.ELECTRIC_CRIMSON, 12)
+            arcade.draw_text(f"Malus actifs: {''.join(self.players[i].currently_affected_by_malus)}", MAP_WIDTH + 15, y - 70, arcade.color.ELECTRIC_CRIMSON, 12)
+            arcade.draw_text(f"Bonus actifs: {''.join(self.players[i].currently_affected_by_bonus)}", MAP_WIDTH + 15, y - 90, arcade.color.ELECTRIC_GREEN, 12)
 
             # Draw a separator line below each player's information
             if i < len(self.player_names) - 1:  # Don't draw a line after the last player's information
