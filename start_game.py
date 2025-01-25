@@ -15,6 +15,8 @@ DB_PATH = os.path.join(DATA_PATH,'db')
 WORLDS_BACKGROUNDS_LOCATION = os.path.join(IMG_PATH,'backgrounds')
 EFFECTS_BACKGROUNDS_LOCATION = os.path.join(WORLDS_BACKGROUNDS_LOCATION,'effects')
 SPRITES_LOCATION = os.path.join(IMG_PATH,'sprites')
+SPRITES_ON_MOUSEOVER_LOCATION = os.path.join(SPRITES_LOCATION,'mouse_over')
+SPRITES_ON_CLICK_LOCATION = os.path.join(SPRITES_LOCATION,'clicked')
 
 SCREEN_WIDTH = 1300
 SCREEN_HEIGHT = 1000
@@ -82,6 +84,7 @@ PLAYER4_COLOR = arcade.color.MEDIUM_VERMILION
 
 USE_ITEM_INVENTORY_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'inventory.png')
 END_TURN_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'end_turn.png')
+
 CURRENCY_SPRITE_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'dollbran.png')
 CURRENCY_SPRITE = arcade.Sprite(CURRENCY_SPRITE_ICON_FILE_PATH)
 
@@ -107,7 +110,7 @@ def get_items_from_db(number_of_items_to_get,player_in_world):
         item_cost = item[2]
         item_target = item[3]
         item_effect = item[4]
-        item_image_file_name = item[5]
+        item_image_file_name = item[6]
         current_item = Item(item_name,item_cost,item_target,item_effect,item_image_file_name)
         items_for_current_world.append(current_item)
 
@@ -304,6 +307,7 @@ class Game(arcade.Window):
         self.board = []
         self.square_width = MAP_WIDTH // COLUMNS_IN_A_WORLD
         self.square_height = SCREEN_HEIGHT // world_rows
+        self.last_dice_result = 0
 
         for row in range(world_rows):
             self.board.append([])
@@ -440,7 +444,7 @@ class Game(arcade.Window):
         # Draw player names and information on the sidebar
         for i, player_name in enumerate(self.player_names):
             current_player = self.players[self.player_turn - 1].player_id
-            y = SCREEN_HEIGHT - (i * 150 + 30)  # Increase distance between each player's information and move it further down
+            y = SCREEN_HEIGHT - (i * 200 + 30)  # Increase distance between each player's information and move it further down
 
             player_name_text=f"{player_name}"
             first_text_width = len(player_name_text) * 18
@@ -458,13 +462,13 @@ class Game(arcade.Window):
             CURRENCY_SPRITE.center_x = second_text_x + dollbran_amount_text_width + 42
             CURRENCY_SPRITE.center_y = y + 7
             CURRENCY_SPRITE.draw()
-            arcade.draw_text(f"Items: {''.join(self.players[i].currently_held_items)}", MAP_WIDTH + 15, y - 28, arcade.color.WHITE, 12)
-            arcade.draw_text(f"Malus actifs: {''.join(self.players[i].currently_affected_by_malus)}", MAP_WIDTH + 15, y - 70, arcade.color.ELECTRIC_CRIMSON, 12)
-            arcade.draw_text(f"Bonus actifs: {''.join(self.players[i].currently_affected_by_bonus)}", MAP_WIDTH + 15, y - 90, arcade.color.ELECTRIC_GREEN, 12)
+            arcade.draw_text(f"Items: {''.join(self.players[i].currently_held_items)}", MAP_WIDTH + 15, y - 35, arcade.color.WHITE, 12,multiline=True,width=int(SCREEN_WIDTH-MAP_WIDTH-15))
+            arcade.draw_text(f"Malus actifs: {', '.join(self.players[i].currently_affected_by_malus)}", MAP_WIDTH + 15, y - 75, arcade.color.ELECTRIC_CRIMSON, 12,multiline=True,width=int(SCREEN_WIDTH-MAP_WIDTH-15))
+            arcade.draw_text(f"Bonus actifs: {', '.join(self.players[i].currently_affected_by_bonus)}", MAP_WIDTH + 15, y - 115, arcade.color.ELECTRIC_GREEN, 12,multiline=True,width=int(SCREEN_WIDTH-MAP_WIDTH-15))
 
             # Draw a separator line below each player's information
             if i < len(self.player_names) - 1:  # Don't draw a line after the last player's information
-                arcade.draw_line(MAP_WIDTH + 10, y - 115, SCREEN_WIDTH - 10, y - 115, arcade.color.ELECTRIC_VIOLET, 2)
+                arcade.draw_line(MAP_WIDTH + 10, y - 150, SCREEN_WIDTH - 10, y - 150, arcade.color.ELECTRIC_VIOLET, 2)
 
         def calculate_dice_sprite_position():
             x = MAP_WIDTH + (SIDEBAR_WIDTH // 4)
@@ -515,31 +519,21 @@ class Game(arcade.Window):
             dice_number = self.roll_dice()  # Roll the dice
             active_player.number_of_dice_rolls_next_turn -= 1
 
-    def manage_merchant_interaction(self,player_id,items):
-        purchased_items = []
+    def manage_merchant_interaction(self,player_id,item_cost):
         for player in self.players:
             if player.player_id == player_id:
                 player_amount_of_dollbran = player.current_dollbran_amount
                 break
 
-        #Draw and click functions
-
-        selected_item = int()
-        item = items[selected_item]
-        if player_amount_of_dollbran >= item.cost:
-            player_amount_of_dollbran -= item.cost
+        if player_amount_of_dollbran >= item_cost:
+            player_amount_of_dollbran -= item_cost
             for player in self.players:
                 if player.player_id == player_id:
                     player.current_dollbran_amount = player_amount_of_dollbran
                     break
-            purchased_items.append(item)
-
-        for item in purchased_items:
-            for player in self.players:
-                if player.player_id == player_id:
-                    player.currently_held_items.append(item)
-
-        return purchased_items
+            return "purchase_ok"
+        else:
+            return "not_enough_dollbrans"
 
     def manage_malus_effect(self,player_id,malus):
         if malus.takes_effect == 'immed':
@@ -569,7 +563,7 @@ class Game(arcade.Window):
             malus = get_malus_from_db(current_player.current_world)
             self.manage_malus_effect(player_id,malus)
             easygui.msgbox(
-                msg=str(malus.name+"\n"+malus.effect),title="Malus",image=malus.sprite
+                msg=str(malus.name+"\n\n"+malus.effect),title="Malus",image=malus.sprite
             )
 
         elif color_of_square == (0, 0, 255):
@@ -582,13 +576,49 @@ class Game(arcade.Window):
             items = get_items_from_db(3,current_player.current_world)
             easygui.msgbox("Vous êtes sur une case de marchand, vous pouvez échanger vos Dollbrans pour des objets qui peuvent vous aider dans votre aventure.",
                            title="Case de Marchand",ok_button="Voir les objets en vente",image=merchant_background_image_file_path)
+            for player in self.players:
+                if player.player_id == player_id:
+                    if player.current_dollbran_amount > 0:
+                        choices_texts = []
+                        choices_pictures = []
+                        for item in items:
+                            item_text = str(item.name + "\n" + "Coût: " + str(item.cost) + "\n\n" + item.effect)
+                            item_picture = item.sprite
+                            choices_texts.append(item_text)
+                            choices_pictures.append(item_picture)
+                        buttons = [('Objet 1', choices_pictures[0]), ('Objet 2', choices_pictures[1]), ('Objet 3', choices_pictures[2])]
+                        while True:
+                            items_presentation_text = str('Choisir un objet: '+"\n"+"Objet 1: "+choices_texts[0]+"\n"+"Objet 2: "+choices_texts[1]+"\n"+"Objet 3: "+choices_texts[2])
+                            choice = easygui.buttonbox(msg=items_presentation_text, title="Objets en vente présentement", choices=[button[0] for button in buttons])
+                            if not choice:
+                                break
+                            index = [button[0] for button in buttons].index(choice)
+                            text = choices_texts[index]
+                            item_selected_index = int(str(choice).split(' ')[1]) - 1
+                            item_selected = items[item_selected_index]
+                            transaction_result = self.manage_merchant_interaction(player_id, item_selected.cost)
+                            if transaction_result == "not_enough_dollbrans":
+                                easygui.msgbox(msg="Vous ne pouvez pas acheter cet objet, vous n'avez pas assez de Dollbrans !",title="Pas assez de Dollbrans")
+                            elif transaction_result == "purchase_ok":
+                                confirm = easygui.ynbox(
+                                    'Vous avez choisi: {}\n\n{}\n\nConfirmer votre achat ?'.format(choice, text),title="Confirmation de votre achat",choices=["Oui","Non"])
+                                if confirm:
+                                    for player in self.players:
+                                        if player.player_id == player_id:
+                                            player.currently_held_items.append(item_selected.name)
+                                            break
+                                    break
+                    else:
+                        easygui.msgbox(msg="Vous ne pouvez pas acheter d'objet au marchand, vous n'avez pas de Dollbrans !",
+                                       title="Pas de Dollbrans")
+
 
         elif color_of_square == (0, 255, 0):
             #square_type = 'question'
             question_background_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'question.png')
-            #get_question_with_choices_and_answer_from_ai(current_player.current_world)
             easygui.msgbox("Vous êtes sur une case de question... voyons voir si vous méritez quelques dollbrans !",
                            title="Case de Question",ok_button="Voir la question et le choix de réponses",image=question_background_image_file_path)
+            #get_question_with_choices_and_answer_from_ai(current_player.current_world)
 
         elif color_of_square == (255, 255, 255):
             #square_type = 'neutral'
@@ -610,7 +640,7 @@ class Game(arcade.Window):
                 malus = get_malus_from_db(current_player.current_world)
                 self.manage_malus_effect(player_id,malus)
                 easygui.msgbox(
-                    msg=str(malus.name + "\n" + malus.effect), title="Malus", image=malus.sprite
+                    msg=str(malus.name + "\n\n" + malus.effect), title="Malus", image=malus.sprite
                 )
 
             elif type_of_hazard == 1:
@@ -622,6 +652,9 @@ class Game(arcade.Window):
                     if player.player_id == player_id:
                         player.currently_held_items.append(item.name)
                         break
+                easygui.msgbox(
+                    msg=str(item.name + "\n\n" + item.effect), title="Objet trouvé", image=item.sprite
+                )
 
         elif color_of_square == (0, 255, 255):
             #square_type = 'turbo'
@@ -640,13 +673,21 @@ class Game(arcade.Window):
     def roll_dice(self):
         dice_number = random.randint(1, 6)  # Generate a random number between 1 and 6
         self.dice_sprite = self.dice_sprites[dice_number]  # Update the dice sprite
+        self.last_dice_result = dice_number
 
         # Get the current player
         current_player = self.players[self.player_turn - 1]  # Subtract 1 because list indices start at 0
 
         # Update the player's location
-        current_player.world_location += dice_number
-        current_player_on_type_of_square = get_square_color_by_location_number(current_player.current_world,current_player.world_location)
+        for _ in range(dice_number):
+            # Update the player's location
+            current_player.world_location += 1
+            current_player_on_type_of_square = get_square_color_by_location_number(current_player.current_world,
+                                                                                   current_player.world_location)
+            # Check if the player has landed on a merchant square
+            if current_player_on_type_of_square == MERCHANT_LOCATION_COLOR:
+                # Trigger merchant interaction
+                self.manage_square_effect(current_player, current_player_on_type_of_square)
 
         # If player's location exceeds the maximum location in the world, move to next world or end game
         if current_player.current_world == 1 and current_player.world_location > WORLD_1_NUMBER_OF_LOCATIONS:
@@ -668,6 +709,8 @@ class Game(arcade.Window):
             current_player.world_location = WORLD_3_NUMBER_OF_LOCATIONS
             self.update_map(self.current_world)
 
+        current_player_on_type_of_square = get_square_color_by_location_number(current_player.current_world,
+                                                                               current_player.world_location)
         self.manage_square_effect(current_player,current_player_on_type_of_square)
 
         return dice_number
@@ -705,7 +748,24 @@ class Game(arcade.Window):
         """
         Called whenever the mouse moves.
         """
-        pass
+        #Mouse Over Icons Effect
+        if self.dice_sprite.collides_with_point((x,y)):
+            current_dice_sprite_file_name = os.path.join(SPRITES_ON_MOUSEOVER_LOCATION,str(self.last_dice_result)+".png")
+        else:
+            current_dice_sprite_file_name = os.path.join(SPRITES_LOCATION,str(self.last_dice_result)+".png")
+        self.dice_sprite.texture = arcade.load_texture(current_dice_sprite_file_name)
+
+        if self.use_item_sprite.collides_with_point((x,y)):
+            current_use_item_sprite_file_name = os.path.join(SPRITES_ON_MOUSEOVER_LOCATION,'inventory.png')
+        else:
+            current_use_item_sprite_file_name = os.path.join(SPRITES_LOCATION, 'inventory.png')
+        self.use_item_sprite.texture = arcade.load_texture(current_use_item_sprite_file_name)
+
+        if self.end_turn_sprite.collides_with_point((x,y)):
+            current_end_turn_sprite_file_name = os.path.join(SPRITES_ON_MOUSEOVER_LOCATION,'end_turn.png')
+        else:
+            current_end_turn_sprite_file_name = os.path.join(SPRITES_LOCATION,'end_turn.png')
+        self.end_turn_sprite.texture = arcade.load_texture(current_end_turn_sprite_file_name)
 
     def on_mouse_press(self, x, y, button, key_modifiers):
         """
@@ -716,16 +776,30 @@ class Game(arcade.Window):
 
         if self.dice_sprite.collides_with_point((x, y)):  # If the player clicks on the dice sprite
             if number_of_clicks_allowed_on_dice > 0:
+                current_dice_sprite_file_name = os.path.join(SPRITES_ON_CLICK_LOCATION,
+                                                             str(self.last_dice_result) + ".png")
+                self.dice_sprite.texture = arcade.load_texture(current_dice_sprite_file_name)
                 self.roll_dice_if_allowed()
 
             else:
                 pass
+        else:
+            current_dice_sprite_file_name = os.path.join(SPRITES_LOCATION,
+                                                         str(self.last_dice_result) + ".png")
+            self.dice_sprite.texture = arcade.load_texture(current_dice_sprite_file_name)
 
         if self.end_turn_sprite.collides_with_point((x, y)):
             if number_of_clicks_allowed_on_dice > 0:
                 pass
             else:
+                current_end_turn_file_name = os.path.join(SPRITES_ON_CLICK_LOCATION,
+                                                             'end_turn.png')
+                self.end_turn_sprite.texture = arcade.load_texture(current_end_turn_file_name)
                 self.manage_new_turn(self.player_turn, self.players)
+        else:
+            current_end_turn_file_name = os.path.join(SPRITES_LOCATION,
+                                                      'end_turn.png')
+            self.end_turn_sprite.texture = arcade.load_texture(current_end_turn_file_name)
 
     def on_mouse_release(self, x, y, button, key_modifiers):
         """
