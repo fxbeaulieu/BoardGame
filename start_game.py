@@ -5,15 +5,22 @@ import os
 import time
 import random
 import sqlite3
-import json
-import openai
+from openai import AzureOpenAI
+from fuzzywuzzy import fuzz
+
+from temp.tests_ai_replies import already_used_questions
 
 PATH_BASE = os.path.dirname(os.path.abspath(__file__))
+
 DATA_PATH = os.path.join(PATH_BASE,'data')
+
 IMG_PATH = os.path.join(DATA_PATH,'img')
 DB_PATH = os.path.join(DATA_PATH,'db')
+AI_QUESTIONS_PATH = os.path.join(DATA_PATH,'ai_questions')
+
 WORLDS_BACKGROUNDS_LOCATION = os.path.join(IMG_PATH,'backgrounds')
 EFFECTS_BACKGROUNDS_LOCATION = os.path.join(WORLDS_BACKGROUNDS_LOCATION,'effects')
+
 SPRITES_LOCATION = os.path.join(IMG_PATH,'sprites')
 SPRITES_ON_MOUSEOVER_LOCATION = os.path.join(SPRITES_LOCATION,'mouse_over')
 SPRITES_ON_CLICK_LOCATION = os.path.join(SPRITES_LOCATION,'clicked')
@@ -21,8 +28,12 @@ SPRITES_ON_CLICK_LOCATION = os.path.join(SPRITES_LOCATION,'clicked')
 SCREEN_WIDTH = 1300
 SCREEN_HEIGHT = 1000
 SCREEN_TITLE = "Voyage au centre de la galaxie"
+
 ITEMS_DB_FILE_PATH=os.path.join(DB_PATH,'items.db')
 MALUS_DB_FILE_PATH=os.path.join(DB_PATH,'malus.db')
+QUESTIONS_USED_WORLD_1_FILE_PATH=os.path.join(AI_QUESTIONS_PATH,'already_used_world1.txt')
+QUESTIONS_USED_WORLD_2_FILE_PATH=os.path.join(AI_QUESTIONS_PATH,'already_used_world2.txt')
+QUESTIONS_USED_WORLD_3_FILE_PATH=os.path.join(AI_QUESTIONS_PATH,'already_used_world3.txt')
 
 SIDEBAR_WIDTH = SCREEN_WIDTH * 0.3
 MAP_WIDTH = SCREEN_WIDTH - SIDEBAR_WIDTH
@@ -88,6 +99,10 @@ END_TURN_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'end_turn.png')
 CURRENCY_SPRITE_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'dollbran.png')
 CURRENCY_SPRITE = arcade.Sprite(CURRENCY_SPRITE_ICON_FILE_PATH)
 
+CURRENCY_LARGE_SPRITE_5_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'dollbran_5.png')
+CURRENCY_LARGE_SPRITE_7_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'dollbran_7.png')
+CURRENCY_LARGE_SPRITE_10_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'dollbran_10.png')
+
 def get_items_from_db(number_of_items_to_get,player_in_world):
     db_connection = sqlite3.connect(ITEMS_DB_FILE_PATH)
     db_connection.row_factory = sqlite3.Row
@@ -151,7 +166,91 @@ def get_malus_from_db(player_in_world):
     return randomly_selected_malus
 
 def get_question_with_choices_and_answer_from_ai(player_in_world):
-    pass
+    if player_in_world == 1:
+        with open(QUESTIONS_USED_WORLD_1_FILE_PATH,'r') as file:
+            already_used_questions_history = file.read()
+    elif player_in_world == 2:
+        with open(QUESTIONS_USED_WORLD_2_FILE_PATH,'r') as file:
+            already_used_questions_history = file.read()
+    elif player_in_world == 3:
+        with open(QUESTIONS_USED_WORLD_3_FILE_PATH,'r') as file:
+            already_used_questions_history = file.read()
+
+    for question_in_history in already_used_questions_history.split('\n\n'):
+        already_used_questions.append(question_in_history)
+
+    def is_question_similar(new_question, already_used_questions_list, threshold=97):
+        for question_in_list in already_used_questions_list:
+            if fuzz.ratio(new_question.lower(), question_in_list.lower()) > threshold:
+                return True
+        return False
+
+    def call_ai(world):
+        system_prompt = "Vous êtes un assistant amical et compétent qui aide à créer des questions de quiz amusantes et éducatives pour les enfants d'école primaire âgés de 8 ans et plus. Les questions doivent être engageantes, adaptées à l'âge et couvrir une variété de sujets tels que les sciences, les mathématiques, l'histoire, la littérature et la culture générale. Assurez-vous de fournir une réponse correcte et deux réponses plausibles mais incorrectes."
+        user_prompt_for_ai_request = ""
+        if player_in_world == 1:
+            user_prompt_for_ai_request = "Veuillez créer une question de quiz pour un enfant de 8 ans sur La Terre. Cela peut inclure des sujets comme la Géographie, l'Histoire, la Biologie, la Géologie et la Chimie. Incluez trois choix de réponse où l'un est correct et les deux autres sont incorrects. Indiquez la réponse correcte. Séparez la question, les choix (1 choix par ligne sans espace entre les lignes) et la réponse en plaçant entre eux trois le diviseur suivant ===== . Ne pas écrire Question:, Choix:, Réponse correcte:, etc. avant les informations. Ne pas mettre a), b), c), etc. devant les choix."
+        elif player_in_world == 2:
+            user_prompt_for_ai_request = "Veuillez créer une question de quiz pour un enfant de 8 ans sur Le Système Solaire. Cela peut inclure des sujets comme l'Histoire, l'Astronomie, la Géologie et la Chimie. Incluez trois choix de réponse où l'un est correct et les deux autres sont incorrects. Indiquez la réponse correcte. Séparez la question, les choix (1 choix par ligne sans espace entre les lignes) et la réponse en plaçant entre eux trois le diviseur suivant ===== Ne pas écrire Question:, Choix:, Réponse correcte:, etc. avant les informations. Ne pas mettre a), b), c), etc. devant les choix."
+        elif player_in_world == 3:
+            user_prompt_for_ai_request = "Veuillez créer une question de quiz pour un enfant de 8 ans sur La Voie Lactée et l'Univers. Cela peut inclure des sujets comme l'Astronomie, l'Histoire, la Chimie et la Physique. Incluez trois choix de réponse où l'un est correct et les deux autres sont incorrects. Indiquez la réponse correcte. Séparez la question, les choix (1 choix par ligne sans espace entre les lignes) et la réponse en plaçant entre eux trois le diviseur suivant ===== Ne pas écrire Question:, Choix:, Réponse correcte:, etc. avant les informations. Ne pas mettre a), b), c), etc. devant les choix."
+
+        user_prompt_for_ai_request += "Ne pas poser de questions parmi les suivantes : "
+        for question in already_used_questions:
+            user_prompt_for_ai_request += question
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt_for_ai_request}
+        ]
+        api_base = "https://o4gpt-4.openai.azure.com/"
+        azure_api_key = os.getenv('AZURE_OPENAI_API_KEY_2')
+        openai_api_version = '2024-05-01-preview'
+        deployment_name = "O4GPT4o"
+        client = AzureOpenAI(
+            azure_endpoint=api_base,
+            api_key=azure_api_key,
+            api_version=openai_api_version
+        )
+        completion = client.chat.completions.create(
+            model=deployment_name,
+            messages=messages,
+            max_tokens=1000,
+            temperature=0.7,
+            stream=False
+        )
+        ai_response_data = completion.choices
+
+        return ai_response_data
+
+    ai_response = call_ai(player_in_world)
+
+    ai_question = ai_response[0].message.content.split('=====')[0].strip()
+    ai_choices = ai_response[0].message.content.split('=====')[1].strip()
+    ai_answer = ai_response[0].message.content.split('=====')[2].strip()
+
+    while is_question_similar(ai_question, already_used_questions):
+        ai_response = call_ai(player_in_world)
+        try:
+            ai_question = ai_response[0].message.content.split('=====')[0].strip()
+            if "système solaire" in ai_question.lower():
+                ai_response = call_ai(player_in_world)
+        except IndexError:
+            continue
+        try:
+            ai_choices = ai_response[0].message.content.split('=====')[1].strip()
+        except IndexError:
+            continue
+        try:
+            ai_answer = ai_response[0].message.content.split('=====')[2].strip()
+        except IndexError:
+            continue
+
+    with open('already_used.txt', 'a') as file:
+        file.write(ai_question + "\n\n")
+
+    question_infos = [ai_question,ai_choices,ai_answer]
+    return question_infos
 
 def game_start_user_inputs():
     num_of_players = None
@@ -185,7 +284,7 @@ def get_dice_sprite(dice_number_on_face):
     return sprite_file_path
 
 def get_player_sprite(player_color):
-    sprite_file_name = "player_sprite" + str(player_color) + ".png"
+    sprite_file_name = "player_sprite_" + str(player_color) + ".png"
     sprite_file_path = os.path.join(SPRITES_LOCATION,sprite_file_name)
 
     return sprite_file_path
@@ -198,7 +297,7 @@ def get_effect_background_file(current_world,type_of_effect,name_of_effect):
     return effect_background_path
 
 def get_player_color_by_property(player_color_name):
-    player_display_color = arcade.Color()
+    player_display_color = None
     if player_color_name == "Bleu":
         player_display_color = PLAYER_BLUE_COLOR
     elif player_color_name == "Mauve":
@@ -258,7 +357,7 @@ def get_square_color_by_location_number(current_world,location_number):
     return square_color
 
 def get_square_icon_by_color(color):
-    icon = arcade.Sprite()
+    icon = None
     if color == (255, 0, 0, 175):
         icon = arcade.Sprite(MALUS_LOCATION_ICON_FILE_PATH)
     elif color == (0, 0, 255, 175):
@@ -433,7 +532,7 @@ class Game(arcade.Window):
 
                 x = column * self.square_width + (self.square_width / 2)
                 y = SCREEN_HEIGHT - (row * self.square_height + (self.square_height / 2))
-                arcade.draw_rectangle_filled(x, y, self.square_width, self.square_height, color)
+                arcade.draw_rectangle_filled(x, y, self.square_width, self.square_height, list(color))
                 arcade.draw_rectangle_outline(x, y, self.square_width+2.5, self.square_height+2.5, arcade.color.ELECTRIC_VIOLET, border_width=5)
 
                 icon_x = x - (self.square_width / 2) + 5
@@ -456,16 +555,16 @@ class Game(arcade.Window):
 
         # Draw player names and information on the sidebar
         for i, player_name in enumerate(self.player_names):
-            current_player = self.players[self.player_turn - 1].player_id
+            current_player_id = self.players[self.player_turn - 1].player_id
             current_player_color = self.players[self.player_turn - 1].player_color
             y = SCREEN_HEIGHT - (i * 200 + 30)  # Increase distance between each player's information and move it further down
 
             player_name_text=f"{player_name}"
-            if current_player == i:
+            if current_player_id == i:
                 if self.text_visibility:
                     arcade.draw_text(player_name_text, MAP_WIDTH + 15, y, get_player_color_by_property(current_player_color), 18,bold=True)  # Move text further to the right
             else:
-                arcade.draw_text(player_name_text, MAP_WIDTH + 15, y, get_player_color_by_property(current_player_color), 18, bold=True)
+                arcade.draw_text(player_name_text, MAP_WIDTH + 15, y, get_player_color_by_property(self.players[i].player_color), 18, bold=True)
 
             second_text_x = SCREEN_WIDTH - 105
             dollbran_amount_text = f"{self.players[i].current_dollbran_amount}"
@@ -528,7 +627,7 @@ class Game(arcade.Window):
     def roll_dice_if_allowed(self):
         active_player = self.players[self.player_turn - 1]
         if active_player.number_of_dice_rolls_next_turn > 0:
-            dice_number = self.roll_dice()  # Roll the dice
+            self.roll_dice()  # Roll the dice
             active_player.number_of_dice_rolls_next_turn -= 1
 
     def manage_merchant_interaction(self,player_id,item_cost):
@@ -628,7 +727,27 @@ class Game(arcade.Window):
             question_background_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'question.png')
             easygui.msgbox("Vous êtes sur une case de question... voyons voir si vous méritez quelques dollbrans !",
                            title="Case de Question",ok_button="Voir la question et le choix de réponses",image=question_background_image_file_path)
-            #get_question_with_choices_and_answer_from_ai(current_player.current_world)
+            question_infos = get_question_with_choices_and_answer_from_ai(current_player.current_world)
+            possible_replies_choices = [question_infos[1].split('\n')[0],question_infos[1].split('\n')[1],question_infos[1].split('\n')[2]]
+            user_answer = easygui.buttonbox(msg=question_infos[0],title="Répondre à la question",choices=possible_replies_choices)
+            if user_answer.lower() == question_infos[2].lower():
+                if current_player.current_world == 1:
+                    dollbrans_won = 10
+                    dollbrans_won_sprite = CURRENCY_LARGE_SPRITE_10_ICON_FILE_PATH
+                    easygui.msgbox(msg="Vous avez gagné: "+str(dollbrans_won)+" Dollbrans !",title="Bonne réponse !",image=dollbrans_won_sprite)
+                    current_player.current_dollbran_amount += dollbrans_won
+                elif current_player.current_world == 2:
+                    dollbrans_won = 7
+                    dollbrans_won_sprite = CURRENCY_LARGE_SPRITE_7_ICON_FILE_PATH
+                    easygui.msgbox(msg="Vous avez gagné: "+str(dollbrans_won)+" Dollbrans !",title="Bonne réponse !",image=dollbrans_won_sprite)
+                    current_player.current_dollbran_amount += dollbrans_won
+                elif current_player.current_world == 3:
+                    dollbrans_won = 5
+                    dollbrans_won_sprite = CURRENCY_LARGE_SPRITE_5_ICON_FILE_PATH
+                    easygui.msgbox(msg="Vous avez gagné: "+str(dollbrans_won)+" Dollbrans !",title="Bonne réponse !",image=dollbrans_won_sprite)
+                    current_player.current_dollbran_amount += dollbrans_won
+            else:
+                easygui.msgbox(msg="Meilleure chance la prochaine fois...",title="Mauvaise réponse...")
 
         elif color_of_square == (255, 255, 255):
             #square_type = 'neutral'
@@ -821,8 +940,11 @@ class Game(arcade.Window):
 
 def main():
     """ Main function """
+    for QUESTION_PATH in QUESTIONS_USED_WORLD_1_FILE_PATH,QUESTIONS_USED_WORLD_2_FILE_PATH,QUESTIONS_USED_WORLD_3_FILE_PATH:
+        with open(QUESTION_PATH,'w') as file:
+            file.write('')
     number_of_players, players_names, players_colors = game_start_user_inputs()
-    window = Game(WORLD_1_NUMBER_OF_ROWS, number_of_players, players_names, players_colors)
+    Game(WORLD_1_NUMBER_OF_ROWS, number_of_players, players_names, players_colors)
     arcade.run()
 
 if __name__ == "__main__":
