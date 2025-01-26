@@ -77,10 +77,10 @@ NEUTRAL_LOCATION_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'neutral.png')
 HAZARD_LOCATION_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'hazard.png')
 TURBO_LOCATION_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'turbo.png')
 
-PLAYER1_COLOR = arcade.color.RICH_ELECTRIC_BLUE
-PLAYER2_COLOR = arcade.color.AMETHYST
-PLAYER3_COLOR = arcade.color.LIME_GREEN
-PLAYER4_COLOR = arcade.color.MEDIUM_VERMILION
+PLAYER_BLUE_COLOR = arcade.color.RICH_ELECTRIC_BLUE
+PLAYER_PURPLE_COLOR = arcade.color.AMETHYST
+PLAYER_GREEN_COLOR = arcade.color.LIME_GREEN
+PLAYER_ORANGE_COLOR = arcade.color.MEDIUM_VERMILION
 
 USE_ITEM_INVENTORY_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'inventory.png')
 END_TURN_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'end_turn.png')
@@ -164,10 +164,19 @@ def game_start_user_inputs():
     for i in range(num_of_players):
         player_name = None
         while not player_name or len(player_name) > max_name_length:
-            player_name = easygui.enterbox(f"Entrer le nom du joueur {i + 1} (max {max_name_length} characters):")
+            player_name = easygui.enterbox(f"Entrer le nom du joueur {i + 1} (max {max_name_length} caractères):")
         player_names.append(player_name)
 
-    return num_of_players, player_names
+    possibles_color_choice = ['Bleu','Mauve','Vert','Orange']
+    players_colors = []
+    for i in range(num_of_players):
+        player_color = None
+        while not player_color:
+            player_color = easygui.buttonbox(f"Joueur {i + 1}, choisir votre couleur", choices=possibles_color_choice)
+        players_colors.append(player_color)
+        possibles_color_choice.remove(player_color)
+
+    return num_of_players, player_names, players_colors
 
 def get_dice_sprite(dice_number_on_face):
     sprite_file_name = str(dice_number_on_face) + ".png"
@@ -175,8 +184,8 @@ def get_dice_sprite(dice_number_on_face):
 
     return sprite_file_path
 
-def get_player_sprite(player_number):
-    sprite_file_name = "player_sprite" + str(player_number+1) + ".png"
+def get_player_sprite(player_color):
+    sprite_file_name = "player_sprite" + str(player_color) + ".png"
     sprite_file_path = os.path.join(SPRITES_LOCATION,sprite_file_name)
 
     return sprite_file_path
@@ -188,17 +197,18 @@ def get_effect_background_file(current_world,type_of_effect,name_of_effect):
 
     return effect_background_path
 
-def get_player_color_by_number(player_number):
-    if player_number == 0:
-        player_color = PLAYER1_COLOR
-    elif player_number == 1:
-        player_color = PLAYER2_COLOR
-    elif player_number == 2:
-        player_color = PLAYER3_COLOR
-    elif player_number == 3:
-        player_color = PLAYER4_COLOR
+def get_player_color_by_property(player_color_name):
+    player_display_color = arcade.Color()
+    if player_color_name == "Bleu":
+        player_display_color = PLAYER_BLUE_COLOR
+    elif player_color_name == "Mauve":
+        player_display_color = PLAYER_PURPLE_COLOR
+    elif player_color_name == "Vert":
+        player_display_color = PLAYER_GREEN_COLOR
+    elif player_color_name == "Orange":
+        player_display_color = PLAYER_ORANGE_COLOR
 
-    return player_color
+    return player_display_color
 
 def get_square_color_by_location_number(current_world,location_number):
     square_color = tuple[int, int, int]
@@ -248,6 +258,7 @@ def get_square_color_by_location_number(current_world,location_number):
     return square_color
 
 def get_square_icon_by_color(color):
+    icon = arcade.Sprite()
     if color == (255, 0, 0, 175):
         icon = arcade.Sprite(MALUS_LOCATION_ICON_FILE_PATH)
     elif color == (0, 0, 255, 175):
@@ -278,10 +289,11 @@ def get_players_in_world(current_world,players):
     return players_in_current_world
 
 class Player:
-    def __init__(self,player_number,player_name):
+    def __init__(self,player_number,player_name,player_color):
         self.player_id = player_number
         self.player_name = player_name
-        self.player_sprite = arcade.Sprite(get_player_sprite(player_number))
+        self.player_color = player_color
+        self.player_sprite = arcade.Sprite(get_player_sprite(player_color))
         self.current_world = 1
         self.world_location = 1
         self.current_dollbran_amount = 0
@@ -291,7 +303,7 @@ class Player:
         self.number_of_dice_rolls_next_turn = 1
 
 class Game(arcade.Window):
-    def __init__(self, world_rows, number_of_players, players_names):
+    def __init__(self, world_rows, number_of_players, players_names,players_colors):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         self.text_visibility = True
         self.start_time = time.time()
@@ -317,10 +329,11 @@ class Game(arcade.Window):
 
         def define_players():
             players_list = []
-            for player, player_number in enumerate(range(number_of_players)):
+            for _, player_number in enumerate(range(number_of_players)):
                 player_name = players_names[player_number]
+                player_color = players_colors[player_number]
                 player_id = player_number
-                players_list.append(Player(player_id, player_name))
+                players_list.append(Player(player_id, player_name, player_color))
 
             return players_list
 
@@ -444,49 +457,48 @@ class Game(arcade.Window):
         # Draw player names and information on the sidebar
         for i, player_name in enumerate(self.player_names):
             current_player = self.players[self.player_turn - 1].player_id
+            current_player_color = self.players[self.player_turn - 1].player_color
             y = SCREEN_HEIGHT - (i * 200 + 30)  # Increase distance between each player's information and move it further down
 
             player_name_text=f"{player_name}"
-            first_text_width = len(player_name_text) * 18
             if current_player == i:
                 if self.text_visibility:
-                    arcade.draw_text(player_name_text, MAP_WIDTH + 15, y, get_player_color_by_number(i), 18,bold=True)  # Move text further to the right
+                    arcade.draw_text(player_name_text, MAP_WIDTH + 15, y, get_player_color_by_property(current_player_color), 18,bold=True)  # Move text further to the right
             else:
-                arcade.draw_text(player_name_text, MAP_WIDTH + 15, y, get_player_color_by_number(i), 18, bold=True)
+                arcade.draw_text(player_name_text, MAP_WIDTH + 15, y, get_player_color_by_property(current_player_color), 18, bold=True)
 
-            padding = 25
-            second_text_x = MAP_WIDTH + 30 + first_text_width + padding
+            second_text_x = SCREEN_WIDTH - 105
             dollbran_amount_text = f"{self.players[i].current_dollbran_amount}"
-            arcade.draw_text(dollbran_amount_text, second_text_x, y, arcade.color.GOLD, 14, bold=True)
-            dollbran_amount_text_width = len(dollbran_amount_text) * 14  # Change the multiplier based on your font size
+            arcade.draw_text(dollbran_amount_text, second_text_x, y, arcade.color.GOLD, 16, bold=True)
+            dollbran_amount_text_width = len(dollbran_amount_text) * 16  # Change the multiplier based on your font size
             CURRENCY_SPRITE.center_x = second_text_x + dollbran_amount_text_width + 42
             CURRENCY_SPRITE.center_y = y + 7
             CURRENCY_SPRITE.draw()
-            arcade.draw_text(f"Items: {''.join(self.players[i].currently_held_items)}", MAP_WIDTH + 15, y - 35, arcade.color.WHITE, 12,multiline=True,width=int(SCREEN_WIDTH-MAP_WIDTH-15))
-            arcade.draw_text(f"Malus actifs: {', '.join(self.players[i].currently_affected_by_malus)}", MAP_WIDTH + 15, y - 75, arcade.color.ELECTRIC_CRIMSON, 12,multiline=True,width=int(SCREEN_WIDTH-MAP_WIDTH-15))
-            arcade.draw_text(f"Bonus actifs: {', '.join(self.players[i].currently_affected_by_bonus)}", MAP_WIDTH + 15, y - 115, arcade.color.ELECTRIC_GREEN, 12,multiline=True,width=int(SCREEN_WIDTH-MAP_WIDTH-15))
+            arcade.draw_text(f"Items: {''.join(self.players[i].currently_held_items)}", MAP_WIDTH + 15, y - 40, arcade.color.WHITE, 12,multiline=True,width=int(SCREEN_WIDTH-MAP_WIDTH-15))
+            arcade.draw_text(f"Malus actifs: {', '.join(self.players[i].currently_affected_by_malus)}", MAP_WIDTH + 15, y - 85, arcade.color.ELECTRIC_CRIMSON, 12,multiline=True,width=int(SCREEN_WIDTH-MAP_WIDTH-15))
+            arcade.draw_text(f"Bonus actifs: {', '.join(self.players[i].currently_affected_by_bonus)}", MAP_WIDTH + 15, y - 130, arcade.color.ELECTRIC_GREEN, 12,multiline=True,width=int(SCREEN_WIDTH-MAP_WIDTH-15))
 
             # Draw a separator line below each player's information
             if i < len(self.player_names) - 1:  # Don't draw a line after the last player's information
-                arcade.draw_line(MAP_WIDTH + 10, y - 150, SCREEN_WIDTH - 10, y - 150, arcade.color.ELECTRIC_VIOLET, 2)
+                arcade.draw_line(MAP_WIDTH + 10, y - 170, SCREEN_WIDTH - 10, y - 170, arcade.color.ELECTRIC_VIOLET, 2)
 
         def calculate_dice_sprite_position():
-            x = MAP_WIDTH + (SIDEBAR_WIDTH // 4)
-            y = BOTTOM_BAR_HEIGHT // 2
+            dice_x = MAP_WIDTH + (SIDEBAR_WIDTH // 4)
+            dice_y = BOTTOM_BAR_HEIGHT // 2
 
-            return x, y
+            return dice_x, dice_y
 
         def calculate_inventory_sprite_position():
-            x = MAP_WIDTH + (SIDEBAR_WIDTH // 2)
-            y = BOTTOM_BAR_HEIGHT // 2
+            inventory_x = MAP_WIDTH + (SIDEBAR_WIDTH // 2)
+            inventory_y = BOTTOM_BAR_HEIGHT // 2
 
-            return x, y
+            return inventory_x, inventory_y
 
         def calculate_end_turn_sprite_position():
-            x = MAP_WIDTH + ((SIDEBAR_WIDTH // 4) * 3)
-            y = BOTTOM_BAR_HEIGHT // 2
+            end_turn_x = MAP_WIDTH + ((SIDEBAR_WIDTH // 4) * 3)
+            end_turn_y = BOTTOM_BAR_HEIGHT // 2
 
-            return x, y
+            return end_turn_x, end_turn_y
 
         for player in self.players:
             if player.current_world == self.current_world:  # Only draw the sprite if the player is in the current world
@@ -520,6 +532,7 @@ class Game(arcade.Window):
             active_player.number_of_dice_rolls_next_turn -= 1
 
     def manage_merchant_interaction(self,player_id,item_cost):
+        player_amount_of_dollbran = int()
         for player in self.players:
             if player.player_id == player_id:
                 player_amount_of_dollbran = player.current_dollbran_amount
@@ -603,10 +616,7 @@ class Game(arcade.Window):
                                 confirm = easygui.ynbox(
                                     'Vous avez choisi: {}\n\n{}\n\nConfirmer votre achat ?'.format(choice, text),title="Confirmation de votre achat",choices=["Oui","Non"])
                                 if confirm:
-                                    for player in self.players:
-                                        if player.player_id == player_id:
-                                            player.currently_held_items.append(item_selected.name)
-                                            break
+                                    player.currently_held_items.append(item_selected.name)
                                     break
                     else:
                         easygui.msgbox(msg="Vous ne pouvez pas acheter d'objet au marchand, vous n'avez pas de Dollbrans !",
@@ -667,6 +677,9 @@ class Game(arcade.Window):
                     self.roll_dice_if_allowed()
                     break
 
+    def view_inventory(self,player_id):
+        pass
+
     def item_used(self):
         pass
 
@@ -715,9 +728,8 @@ class Game(arcade.Window):
 
         return dice_number
 
-    def manage_new_turn(self, last_player_to_play, players):
+    def manage_new_turn(self, last_player_to_play):
         # Update the player's turn before getting the current player
-        last_player_to_play = self.player_turn
         self.players[last_player_to_play - 1].number_of_dice_rolls_next_turn = 1
 
         if last_player_to_play == len(self.players):
@@ -795,7 +807,7 @@ class Game(arcade.Window):
                 current_end_turn_file_name = os.path.join(SPRITES_ON_CLICK_LOCATION,
                                                              'end_turn.png')
                 self.end_turn_sprite.texture = arcade.load_texture(current_end_turn_file_name)
-                self.manage_new_turn(self.player_turn, self.players)
+                self.manage_new_turn(self.player_turn)
         else:
             current_end_turn_file_name = os.path.join(SPRITES_LOCATION,
                                                       'end_turn.png')
@@ -809,8 +821,8 @@ class Game(arcade.Window):
 
 def main():
     """ Main function """
-    number_of_players, players_names = game_start_user_inputs()
-    window = Game(WORLD_1_NUMBER_OF_ROWS, number_of_players, players_names)
+    number_of_players, players_names, players_colors = game_start_user_inputs()
+    window = Game(WORLD_1_NUMBER_OF_ROWS, number_of_players, players_names, players_colors)
     arcade.run()
 
 if __name__ == "__main__":
