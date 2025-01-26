@@ -8,8 +8,6 @@ import sqlite3
 from openai import AzureOpenAI
 from fuzzywuzzy import fuzz
 
-from temp.tests_ai_replies import already_used_questions
-
 PATH_BASE = os.path.dirname(os.path.abspath(__file__))
 
 DATA_PATH = os.path.join(PATH_BASE,'data')
@@ -114,7 +112,7 @@ def get_items_from_db(number_of_items_to_get,player_in_world):
             self.cost = cost
             self.targets = targets
             self.effect = effect
-            self.sprite = get_effect_background_file(player_in_world,'item',sprite_file_name)
+            self.sprite = get_effect_background_file(player_in_world,'items',sprite_file_name)
 
     db_cursor.execute('SELECT * FROM items WHERE item_avail_in_world=?', (player_in_world,))
     items_in_current_world_data = db_cursor.fetchall()
@@ -166,6 +164,7 @@ def get_malus_from_db(player_in_world):
     return randomly_selected_malus
 
 def get_question_with_choices_and_answer_from_ai(player_in_world):
+    already_used_questions = []
     if player_in_world == 1:
         with open(QUESTIONS_USED_WORLD_1_FILE_PATH,'r') as file:
             already_used_questions_history = file.read()
@@ -189,11 +188,11 @@ def get_question_with_choices_and_answer_from_ai(player_in_world):
         system_prompt = "Vous êtes un assistant amical et compétent qui aide à créer des questions de quiz amusantes et éducatives pour les enfants d'école primaire âgés de 8 ans et plus. Les questions doivent être engageantes, adaptées à l'âge et couvrir une variété de sujets tels que les sciences, les mathématiques, l'histoire, la littérature et la culture générale. Assurez-vous de fournir une réponse correcte et deux réponses plausibles mais incorrectes."
         user_prompt_for_ai_request = ""
         if world == 1:
-            user_prompt_for_ai_request = "Veuillez créer une question de quiz pour un enfant de 8 ans sur La Terre. Cela peut inclure des sujets comme la Géographie, l'Histoire, la Biologie, la Géologie et la Chimie. Incluez trois choix de réponse où l'un est correct et les deux autres sont incorrects. Indiquez la réponse correcte. Séparez la question, les choix (1 choix par ligne sans espace entre les lignes) et la réponse en plaçant entre eux trois le diviseur suivant ===== . Ne pas écrire Question:, Choix:, Réponse correcte:, etc. avant les informations. Ne pas mettre a), b), c), etc. devant les choix."
+            user_prompt_for_ai_request = "Veuillez créer une question de quizz pour un enfant de 8 ans sur La Terre. Cela peut inclure des sujets comme la Géographie, l'Histoire, la Biologie, la Géologie et la Chimie. Incluez trois choix de réponse où l'un est correct et les deux autres sont incorrects. Indiquez la réponse correcte. Séparez la question, les choix (1 choix par ligne sans espace entre les lignes) et la réponse en plaçant entre eux trois le diviseur suivant ===== . Ne pas écrire Question:, Choix:, Réponse correcte:, etc. avant les informations. Ne pas mettre a), b), c), etc. devant les choix. La réponse doit être écrite de façon identique qu'elle est écrite dans les choix de réponse."
         elif world == 2:
-            user_prompt_for_ai_request = "Veuillez créer une question de quiz pour un enfant de 8 ans sur Le Système Solaire. Cela peut inclure des sujets comme l'Histoire, l'Astronomie, la Géologie et la Chimie. Incluez trois choix de réponse où l'un est correct et les deux autres sont incorrects. Indiquez la réponse correcte. Séparez la question, les choix (1 choix par ligne sans espace entre les lignes) et la réponse en plaçant entre eux trois le diviseur suivant ===== Ne pas écrire Question:, Choix:, Réponse correcte:, etc. avant les informations. Ne pas mettre a), b), c), etc. devant les choix."
+            user_prompt_for_ai_request = "Veuillez créer une question de quizz pour un enfant de 8 ans sur Le Système Solaire. Cela peut inclure des sujets comme l'Histoire, l'Astronomie, la Géologie et la Chimie. Incluez trois choix de réponse où l'un est correct et les deux autres sont incorrects. Indiquez la réponse correcte. Séparez la question, les choix (1 choix par ligne sans espace entre les lignes) et la réponse en plaçant entre eux trois le diviseur suivant ===== Ne pas écrire Question:, Choix:, Réponse correcte:, etc. avant les informations. Ne pas mettre a), b), c), etc. devant les choix. La réponse doit être écrite de façon identique qu'elle est écrite dans les choix de réponse."
         elif world == 3:
-            user_prompt_for_ai_request = "Veuillez créer une question de quiz pour un enfant de 8 ans sur La Voie Lactée et l'Univers. Cela peut inclure des sujets comme l'Astronomie, l'Histoire, la Chimie et la Physique. Incluez trois choix de réponse où l'un est correct et les deux autres sont incorrects. Indiquez la réponse correcte. Séparez la question, les choix (1 choix par ligne sans espace entre les lignes) et la réponse en plaçant entre eux trois le diviseur suivant ===== Ne pas écrire Question:, Choix:, Réponse correcte:, etc. avant les informations. Ne pas mettre a), b), c), etc. devant les choix."
+            user_prompt_for_ai_request = "Veuillez créer une question de quizz pour un enfant de 8 ans sur La Voie Lactée et l'Univers. Cela peut inclure des sujets comme l'Astronomie, l'Histoire, la Chimie et la Physique. Incluez trois choix de réponse où l'un est correct et les deux autres sont incorrects. Indiquez la réponse correcte. Séparez la question, les choix (1 choix par ligne sans espace entre les lignes) et la réponse en plaçant entre eux trois le diviseur suivant ===== Ne pas écrire Question:, Choix:, Réponse correcte:, etc. avant les informations. Ne pas mettre a), b), c), etc. devant les choix. La réponse doit être écrite de façon identique qu'elle est écrite dans les choix de réponse."
 
         user_prompt_for_ai_request += "Ne pas poser de questions parmi les suivantes : "
         for question in already_used_questions:
@@ -246,8 +245,15 @@ def get_question_with_choices_and_answer_from_ai(player_in_world):
         except IndexError:
             continue
 
-    with open('already_used.txt', 'a') as file:
-        file.write(ai_question + "\n\n")
+    if player_in_world == 1:
+        with open(QUESTIONS_USED_WORLD_1_FILE_PATH,'a') as file:
+            file.write(ai_question + "\n\n")
+    elif player_in_world == 2:
+        with open(QUESTIONS_USED_WORLD_2_FILE_PATH,'a') as file:
+            file.write(ai_question + "\n\n")
+    elif player_in_world == 3:
+        with open(QUESTIONS_USED_WORLD_3_FILE_PATH,'a') as file:
+            file.write(ai_question + "\n\n")
 
     question_infos = [ai_question,ai_choices,ai_answer]
     return question_infos
@@ -263,7 +269,7 @@ def game_start_user_inputs():
     for i in range(num_of_players):
         player_name = None
         while not player_name or len(player_name) > max_name_length:
-            player_name = easygui.enterbox(f"Entrer le nom du joueur {i + 1} (max {max_name_length} caractères):")
+            player_name = easygui.enterbox(f"Entrer le nom du joueur {i + 1} (max {max_name_length} caractères):",title=f"Nom du joueur {i + 1}")
         player_names.append(player_name)
 
     possibles_color_choice = ['Bleu','Mauve','Vert','Orange']
@@ -271,7 +277,7 @@ def game_start_user_inputs():
     for i in range(num_of_players):
         player_color = None
         while not player_color:
-            player_color = easygui.buttonbox(f"Joueur {i + 1}, choisir votre couleur", choices=possibles_color_choice)
+            player_color = easygui.buttonbox(f"Joueur {i + 1}, choisir votre couleur parmi les disponibles:", title=f"Couleur pour le joueur {i + 1}", choices=possibles_color_choice)
         players_colors.append(player_color)
         possibles_color_choice.remove(player_color)
 
@@ -566,14 +572,14 @@ class Game(arcade.Window):
             else:
                 arcade.draw_text(player_name_text, MAP_WIDTH + 15, y, get_player_color_by_property(self.players[i].player_color), 18, bold=True)
 
-            second_text_x = SCREEN_WIDTH - 105
+            second_text_x = SCREEN_WIDTH - 120
             dollbran_amount_text = f"{self.players[i].current_dollbran_amount}"
             arcade.draw_text(dollbran_amount_text, second_text_x, y, arcade.color.GOLD, 16, bold=True)
             dollbran_amount_text_width = len(dollbran_amount_text) * 16  # Change the multiplier based on your font size
             CURRENCY_SPRITE.center_x = second_text_x + dollbran_amount_text_width + 42
             CURRENCY_SPRITE.center_y = y + 7
             CURRENCY_SPRITE.draw()
-            arcade.draw_text(f"Items: {''.join(self.players[i].currently_held_items)}", MAP_WIDTH + 15, y - 40, arcade.color.WHITE, 12,multiline=True,width=int(SCREEN_WIDTH-MAP_WIDTH-15))
+            arcade.draw_text(f"Items: {', '.join(self.players[i].currently_held_items)}", MAP_WIDTH + 15, y - 40, arcade.color.WHITE, 12,multiline=True,width=int(SCREEN_WIDTH-MAP_WIDTH-15))
             arcade.draw_text(f"Malus actifs: {', '.join(self.players[i].currently_affected_by_malus)}", MAP_WIDTH + 15, y - 85, arcade.color.ELECTRIC_CRIMSON, 12,multiline=True,width=int(SCREEN_WIDTH-MAP_WIDTH-15))
             arcade.draw_text(f"Bonus actifs: {', '.join(self.players[i].currently_affected_by_bonus)}", MAP_WIDTH + 15, y - 130, arcade.color.ELECTRIC_GREEN, 12,multiline=True,width=int(SCREEN_WIDTH-MAP_WIDTH-15))
 
@@ -685,6 +691,12 @@ class Game(arcade.Window):
             else:
                 merchant_background_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'merchant_world2-3.png')
 
+            def confirm_purchase(item_choice,item_text_string):
+                user_confirmation = easygui.ynbox(
+                    'Vous avez choisi: {}\n\n{}\n\nConfirmer votre achat ?'.format(item_choice, item_text_string),
+                    title="Confirmation de votre achat", choices=["Oui", "Non"], image=item_selected.sprite)
+                return user_confirmation
+
             items = get_items_from_db(3,current_player.current_world)
             easygui.msgbox("Vous êtes sur une case de marchand, vous pouvez échanger vos Dollbrans pour des objets qui peuvent vous aider dans votre aventure.",
                            title="Case de Marchand",ok_button="Voir les objets en vente",image=merchant_background_image_file_path)
@@ -694,13 +706,13 @@ class Game(arcade.Window):
                         choices_texts = []
                         choices_pictures = []
                         for item in items:
-                            item_text = str(item.name + "\n" + "Coût: " + str(item.cost) + "\n\n" + item.effect)
+                            item_text = str(item.name + "\n" + "Coût: " + str(item.cost) + "\n" + "Effet: " + item.effect)
                             item_picture = item.sprite
                             choices_texts.append(item_text)
                             choices_pictures.append(item_picture)
-                        buttons = [('Objet 1', choices_pictures[0]), ('Objet 2', choices_pictures[1]), ('Objet 3', choices_pictures[2])]
+                        buttons = [('Objet 1', ), ('Objet 2', ), ('Objet 3', )]
                         while True:
-                            items_presentation_text = str('Choisir un objet: '+"\n"+"Objet 1: "+choices_texts[0]+"\n"+"Objet 2: "+choices_texts[1]+"\n"+"Objet 3: "+choices_texts[2])
+                            items_presentation_text = str('Choisir un objet: '+"\n\n"+"Objet 1: "+"\n"+choices_texts[0]+"\n\n"+"Objet 2: "+"\n"+choices_texts[1]+"\n\n"+"Objet 3: "+"\n"+choices_texts[2])
                             choice = easygui.buttonbox(msg=items_presentation_text, title="Objets en vente présentement", choices=[button[0] for button in buttons])
                             if not choice:
                                 break
@@ -712,11 +724,18 @@ class Game(arcade.Window):
                             if transaction_result == "not_enough_dollbrans":
                                 easygui.msgbox(msg="Vous ne pouvez pas acheter cet objet, vous n'avez pas assez de Dollbrans !",title="Pas assez de Dollbrans")
                             elif transaction_result == "purchase_ok":
-                                confirm = easygui.ynbox(
-                                    'Vous avez choisi: {}\n\n{}\n\nConfirmer votre achat ?'.format(choice, text),title="Confirmation de votre achat",choices=["Oui","Non"])
-                                if confirm:
-                                    player.currently_held_items.append(item_selected.name)
-                                    break
+                                while True:
+                                    try:
+                                        confirm = confirm_purchase(choice,text)
+                                        if confirm == "Oui":
+                                            player.currently_held_items.append(item_selected.name)
+                                            break
+                                        elif confirm == "Non":
+                                            break
+                                    except AssertionError:
+                                        continue
+                                break
+
                     else:
                         easygui.msgbox(msg="Vous ne pouvez pas acheter d'objet au marchand, vous n'avez pas de Dollbrans !",
                                        title="Pas de Dollbrans")
@@ -728,9 +747,9 @@ class Game(arcade.Window):
             easygui.msgbox("Vous êtes sur une case de question... voyons voir si vous méritez quelques dollbrans !",
                            title="Case de Question",ok_button="Voir la question et le choix de réponses",image=question_background_image_file_path)
             question_infos = get_question_with_choices_and_answer_from_ai(current_player.current_world)
-            possible_replies_choices = [question_infos[1].split('\n')[0],question_infos[1].split('\n')[1],question_infos[1].split('\n')[2]]
+            possible_replies_choices = [question_infos[1].split('\n')[0].strip(),question_infos[1].split('\n')[1].strip(),question_infos[1].split('\n')[2].strip()]
             user_answer = easygui.buttonbox(msg=question_infos[0],title="Répondre à la question",choices=possible_replies_choices)
-            if user_answer.lower() == question_infos[2].lower():
+            if user_answer.lower().strip() == question_infos[2].lower().strip():
                 if current_player.current_world == 1:
                     dollbrans_won = 10
                     dollbrans_won_sprite = CURRENCY_LARGE_SPRITE_10_ICON_FILE_PATH
@@ -843,7 +862,8 @@ class Game(arcade.Window):
 
         current_player_on_type_of_square = get_square_color_by_location_number(current_player.current_world,
                                                                                current_player.world_location)
-        self.manage_square_effect(current_player,current_player_on_type_of_square)
+        if not current_player_on_type_of_square == MERCHANT_LOCATION_COLOR:
+            self.manage_square_effect(current_player,current_player_on_type_of_square)
 
         return dice_number
 
