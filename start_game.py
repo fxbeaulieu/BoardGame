@@ -188,11 +188,11 @@ def get_question_with_choices_and_answer_from_ai(player_in_world):
     def call_ai(world):
         system_prompt = "Vous êtes un assistant amical et compétent qui aide à créer des questions de quiz amusantes et éducatives pour les enfants d'école primaire âgés de 8 ans et plus. Les questions doivent être engageantes, adaptées à l'âge et couvrir une variété de sujets tels que les sciences, les mathématiques, l'histoire, la littérature et la culture générale. Assurez-vous de fournir une réponse correcte et deux réponses plausibles mais incorrectes."
         user_prompt_for_ai_request = ""
-        if player_in_world == 1:
+        if world == 1:
             user_prompt_for_ai_request = "Veuillez créer une question de quiz pour un enfant de 8 ans sur La Terre. Cela peut inclure des sujets comme la Géographie, l'Histoire, la Biologie, la Géologie et la Chimie. Incluez trois choix de réponse où l'un est correct et les deux autres sont incorrects. Indiquez la réponse correcte. Séparez la question, les choix (1 choix par ligne sans espace entre les lignes) et la réponse en plaçant entre eux trois le diviseur suivant ===== . Ne pas écrire Question:, Choix:, Réponse correcte:, etc. avant les informations. Ne pas mettre a), b), c), etc. devant les choix."
-        elif player_in_world == 2:
+        elif world == 2:
             user_prompt_for_ai_request = "Veuillez créer une question de quiz pour un enfant de 8 ans sur Le Système Solaire. Cela peut inclure des sujets comme l'Histoire, l'Astronomie, la Géologie et la Chimie. Incluez trois choix de réponse où l'un est correct et les deux autres sont incorrects. Indiquez la réponse correcte. Séparez la question, les choix (1 choix par ligne sans espace entre les lignes) et la réponse en plaçant entre eux trois le diviseur suivant ===== Ne pas écrire Question:, Choix:, Réponse correcte:, etc. avant les informations. Ne pas mettre a), b), c), etc. devant les choix."
-        elif player_in_world == 3:
+        elif world == 3:
             user_prompt_for_ai_request = "Veuillez créer une question de quiz pour un enfant de 8 ans sur La Voie Lactée et l'Univers. Cela peut inclure des sujets comme l'Astronomie, l'Histoire, la Chimie et la Physique. Incluez trois choix de réponse où l'un est correct et les deux autres sont incorrects. Indiquez la réponse correcte. Séparez la question, les choix (1 choix par ligne sans espace entre les lignes) et la réponse en plaçant entre eux trois le diviseur suivant ===== Ne pas écrire Question:, Choix:, Réponse correcte:, etc. avant les informations. Ne pas mettre a), b), c), etc. devant les choix."
 
         user_prompt_for_ai_request += "Ne pas poser de questions parmi les suivantes : "
@@ -233,7 +233,7 @@ def get_question_with_choices_and_answer_from_ai(player_in_world):
         ai_response = call_ai(player_in_world)
         try:
             ai_question = ai_response[0].message.content.split('=====')[0].strip()
-            if "système solaire" in ai_question.lower():
+            if "système solaire" in ai_question.lower() and player_in_world == 1:
                 ai_response = call_ai(player_in_world)
         except IndexError:
             continue
