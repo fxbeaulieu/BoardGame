@@ -139,12 +139,15 @@ def get_malus_from_db(player_in_world):
     db_cursor = db_connection.cursor()
 
     class Malus:
-        def __init__(self,name,targets,effect,takes_effect,sprite_file_name):
+        def __init__(self,name,targets,effect,takes_effect,sprite_file_name,targets_parameter,targets_parameters_value_change,targets_parameters_value_change_type):
             self.name = name
             self.targets = targets
             self.effect = effect
             self.takes_effect = takes_effect
             self.sprite = get_effect_background_file(player_in_world,'malus',sprite_file_name)
+            self.targets_parameter = targets_parameter
+            self.targets_parameter_value_change = targets_parameters_value_change
+            self.targets_parameter_value_change_type = targets_parameters_value_change_type
 
     db_cursor.execute('SELECT * FROM malus WHERE malus_in_world=?',(player_in_world,))
     malus_in_current_world_data = db_cursor.fetchall()
@@ -155,8 +158,11 @@ def get_malus_from_db(player_in_world):
         malus_effect = malus[3]
         malus_takes_effect = malus[5]
         malus_image_file_name = malus[6]
+        malus_targets_parameter = malus[7]
+        malus_targets_parameter_value_change = malus[8]
+        malus_targets_parameter_value_change_type = malus[9]
 
-        current_malus = Malus(malus_name,malus_targets,malus_effect,malus_takes_effect,malus_image_file_name)
+        current_malus = Malus(malus_name,malus_targets,malus_effect,malus_takes_effect,malus_image_file_name,malus_targets_parameter,malus_targets_parameter_value_change,malus_targets_parameter_value_change_type)
         malus_for_current_world.append(current_malus)
 
     randomly_selected_malus = random.choice(malus_for_current_world)
@@ -654,20 +660,69 @@ class Game(arcade.Window):
             return "not_enough_dollbrans"
 
     def manage_malus_effect(self,player_id,malus):
-        if malus.takes_effect == 'immed':
-            pass
+        target_players = []
+        other_players = []
+        other_players_choices = []
+        rewarded_players = []
+
+        if not malus.targets == 'self':
+            if malus.targets == 'all_players':
+                target_players = self.players
+            elif malus.targets == 'self_and_one_other_player':
+                for player in self.players:
+                    if player.player_id == player_id:
+                        target_players.append(player)
+                    else:
+                        other_players.append(player)
+                for player in other_players:
+                    player_number = player.player_id+1
+                    other_players_choices.append(f"Joueur {player_number}")
+                other_player = easygui.buttonbox(msg=f"Joueur {player_id + 1} : Choisir l'autre joueur affecté par le malus",title="Choix d'un autre joueur affecté par un malus",choices=other_players_choices)
+                other_player_id = int(str(other_player).split(' ')[1])-1
+                for player in self.players:
+                    if player.player_id == other_player_id:
+                        other_player_object = player
+                        target_players.append(other_player_object)
+            elif malus.targets == 'self_and_all_other_players':
+                for player in self.players:
+                    if player.player_id == player_id:
+                        target_players.append(player)
+                    else:
+                        rewarded_players.append(player)
         else:
             for player in self.players:
                 if player.player_id == player_id:
-                    player.currently_affected_by_malus.append(malus.name)
-            if malus.takes_effect == 'next_turn':
+                    target_players.append(player)
+                    break
+
+        if malus.targets_parameter == 'item':
+            if malus.targets_parameter_value_change_type == 'remove':
                 pass
-            elif malus.takes_effect == 'next_two_turns':
+        elif malus.targets_parameter == 'squares':
+            if malus.targets_parameter_value_change_type == 'decrement':
                 pass
-            elif malus.takes_effect == 'next_merchant':
+            if malus.targets_parameter_value_change_type == 'set':
                 pass
-            elif malus.takes_effect == 'immed_and_next_turn':
+        elif malus.targets_parameter == 'dollbran':
+            if malus.targets_parameter_value_change_type == 'decrement':
                 pass
+        elif malus.targets_parameter == 'merchant_price':
+            if malus.targets_parameter_value_change_type == 'multiply':
+                pass
+        elif malus.targets_parameter == 'dice_value':
+            if malus.targets_value_change_type == 'multiply':
+                pass
+
+        if malus.takes_effect == 'immed':
+            pass
+        elif malus.takes_effect == 'next_turn':
+            pass
+        elif malus.takes_effect == 'next_two_turns':
+            pass
+        elif malus.takes_effect == 'next_merchant':
+            pass
+        elif malus.takes_effect == 'immed_and_next_turn':
+            pass
 
     def manage_square_effect(self,current_player,color_of_square):
         player_id = current_player.player_id
