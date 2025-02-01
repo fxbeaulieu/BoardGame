@@ -712,37 +712,53 @@ class Game(arcade.Window):
                     elif len(rewarded_players) == 0:
                         #easygui to pick items to lose
                         pass
+
             elif malus.targets_parameter == 'squares':
                 if malus.targets_parameter_value_change_type == 'decrement':
-                    pass
+                    decrement_amount_of_squares = int(malus.targets_parameter_value_change)
+                    for player in target_players:
+                        #Calculate current location and verify if less than first square of world
+                        #Redraw sprites and map
+                        pass
                 if malus.targets_parameter_value_change_type == 'set':
-                    pass
+                    square_to_set = int(malus.targets_parameter_value_change)
+                    for player in target_players:
+                        #Set current location
+                        #Redraw sprites and map
+                        pass
+
             elif malus.targets_parameter == 'dollbran':
                 if malus.targets_parameter_value_change_type == 'decrement':
-                    pass
-            elif malus.targets_parameter == 'merchant_price':
-                if malus.targets_parameter_value_change_type == 'multiply':
-                    pass
+                    amount_of_dollbrans_to_remove = int(malus.targets_parameter_value_change)
+                    for player in target_players:
+                        #Remove Dollbrans from player's total
+                        #Redraw sidebar infos
+                        pass
+
             elif malus.targets_parameter == 'dice_value':
                 if malus.targets_value_change_type == 'multiply':
                     pass
+
             elif malus.targets_parameter == 'turn':
                 if malus.targets_value_change_type == 'decrement':
                     pass
-        elif malus.takes_effect == 'next_turn':
-            self.malus_waiting.append([malus,1])
-        elif malus.takes_effect == 'next_two_turns':
-            self.malus_waiting.append([malus,2])
-        elif malus.takes_effect == 'next_merchant':
-            self.malus_waiting.append([malus,'merchant'])
 
-        #Remove Malus from player's currently affected by malus list
+            # Remove Malus from player's currently affected by malus list
+        else:
+            # Add Malus to player's currently affected by malus list
+            if malus.takes_effect == 'next_turn':
+                self.malus_waiting.append([malus,1])
+            elif malus.takes_effect == 'next_two_turns':
+                self.malus_waiting.append([malus,2])
+            elif malus.takes_effect == 'next_merchant':
+                self.malus_waiting.append([malus,'merchant'])
 
     def check_for_malus_this_turn(self, square, player_id):
         for malus in self.malus_waiting:
             if type(malus[1]) == int and malus[1] > 0:
                 malus = [malus[0], malus[1] - 1]
             elif type(malus[1]) == int and malus[1] == 0:
+                malus[0].takes_effect = 'immed'
                 self.manage_malus_effect(player_id,malus[0])
 
     def manage_square_effect(self,current_player,color_of_square):
@@ -762,6 +778,7 @@ class Game(arcade.Window):
 
         elif color_of_square == (0, 0, 255):
             #square_type = 'merchant'
+
             if current_player.current_world == 1:
                 merchant_background_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION,'merchant_world1.png')
             else:
@@ -774,6 +791,14 @@ class Game(arcade.Window):
                 return user_confirmation
 
             items = get_items_from_db(3,current_player.current_world)
+            for malus in self.malus_waiting:
+                if type(malus[1]) == str and malus[1] == "merchant":
+                    for malus_name in current_player.currently_affected_by_malus:
+                        if malus_name == malus[0].name:
+                            for item in items:
+                                item.cost = float(item.cost*2)
+                                #Remove Malus from player's currently affected by malus list and the waiting malus list
+
             easygui.msgbox("Vous êtes sur une case de marchand, vous pouvez échanger vos Dollbrans pour des objets qui peuvent vous aider dans votre aventure.",
                            title="Case de Marchand",ok_button="Voir les objets en vente",image=merchant_background_image_file_path)
             for player in self.players:
