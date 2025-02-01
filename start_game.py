@@ -431,6 +431,7 @@ class Game(arcade.Window):
         self.square_width = MAP_WIDTH // COLUMNS_IN_A_WORLD
         self.square_height = SCREEN_HEIGHT // world_rows
         self.last_dice_result = 0
+        self.malus_waiting = []
 
         for row in range(world_rows):
             self.board.append([])
@@ -660,69 +661,89 @@ class Game(arcade.Window):
             return "not_enough_dollbrans"
 
     def manage_malus_effect(self,player_id,malus):
-        target_players = []
-        other_players = []
-        other_players_choices = []
-        rewarded_players = []
-
-        if not malus.targets == 'self':
-            if malus.targets == 'all_players':
-                target_players = self.players
-            elif malus.targets == 'self_and_one_other_player':
-                for player in self.players:
-                    if player.player_id == player_id:
-                        target_players.append(player)
-                    else:
-                        other_players.append(player)
-                for player in other_players:
-                    player_number = player.player_id+1
-                    other_players_choices.append(f"Joueur {player_number}")
-                other_player = easygui.buttonbox(msg=f"Joueur {player_id + 1} : Choisir l'autre joueur affecté par le malus",title="Choix d'un autre joueur affecté par un malus",choices=other_players_choices)
-                other_player_id = int(str(other_player).split(' ')[1])-1
-                for player in self.players:
-                    if player.player_id == other_player_id:
-                        other_player_object = player
-                        target_players.append(other_player_object)
-            elif malus.targets == 'self_and_all_other_players':
-                for player in self.players:
-                    if player.player_id == player_id:
-                        target_players.append(player)
-                    else:
-                        rewarded_players.append(player)
-        else:
-            for player in self.players:
-                if player.player_id == player_id:
-                    target_players.append(player)
-                    break
-
-        if malus.targets_parameter == 'item':
-            if malus.targets_parameter_value_change_type == 'remove':
-                pass
-        elif malus.targets_parameter == 'squares':
-            if malus.targets_parameter_value_change_type == 'decrement':
-                pass
-            if malus.targets_parameter_value_change_type == 'set':
-                pass
-        elif malus.targets_parameter == 'dollbran':
-            if malus.targets_parameter_value_change_type == 'decrement':
-                pass
-        elif malus.targets_parameter == 'merchant_price':
-            if malus.targets_parameter_value_change_type == 'multiply':
-                pass
-        elif malus.targets_parameter == 'dice_value':
-            if malus.targets_value_change_type == 'multiply':
-                pass
-
         if malus.takes_effect == 'immed':
-            pass
+            target_players = []
+            other_players = []
+            other_players_choices = []
+            rewarded_players = []
+
+            if not malus.targets == 'self':
+                if malus.targets == 'all_players':
+                    target_players = self.players
+                elif malus.targets == 'self_and_one_other_player':
+                    for player in self.players:
+                        if player.player_id == player_id:
+                            target_players.append(player)
+                        else:
+                            other_players.append(player)
+                    for player in other_players:
+                        player_number = player.player_id+1
+                        other_players_choices.append(f"Joueur {player_number}")
+                    other_player = easygui.buttonbox(msg=f"Joueur {player_id + 1} : Choisir l'autre joueur affecté par le malus",title="Choix d'un autre joueur affecté par un malus",choices=other_players_choices)
+                    other_player_id = int(str(other_player).split(' ')[1])-1
+                    for player in self.players:
+                        if player.player_id == other_player_id:
+                            other_player_object = player
+                            target_players.append(other_player_object)
+                elif malus.targets == 'self_and_all_other_players':
+                    for player in self.players:
+                        if player.player_id == player_id:
+                            target_players.append(player)
+                        else:
+                            rewarded_players.append(player)
+            else:
+                for player in self.players:
+                    if player.player_id == player_id:
+                        target_players.append(player)
+                        break
+
+            if malus.targets_parameter == 'item':
+                if malus.targets_parameter_value_change_type == 'remove':
+                    if len(rewarded_players) >= 1:
+                        if len(target_players[0].currently_held_items) > len(rewarded_players):
+                            #pick random players equal to number of held items
+                            #pick random order for players to steal items
+                            #easygui to pick items to steal
+                            pass
+                        elif len(target_players[0].currently_held_items) <= len(rewarded_players):
+                            #pick random order for players to steal items
+                            #easygui to pick items to steal
+                            pass
+                    elif len(rewarded_players) == 0:
+                        #easygui to pick items to lose
+                        pass
+            elif malus.targets_parameter == 'squares':
+                if malus.targets_parameter_value_change_type == 'decrement':
+                    pass
+                if malus.targets_parameter_value_change_type == 'set':
+                    pass
+            elif malus.targets_parameter == 'dollbran':
+                if malus.targets_parameter_value_change_type == 'decrement':
+                    pass
+            elif malus.targets_parameter == 'merchant_price':
+                if malus.targets_parameter_value_change_type == 'multiply':
+                    pass
+            elif malus.targets_parameter == 'dice_value':
+                if malus.targets_value_change_type == 'multiply':
+                    pass
+            elif malus.targets_parameter == 'turn':
+                if malus.targets_value_change_type == 'decrement':
+                    pass
         elif malus.takes_effect == 'next_turn':
-            pass
+            self.malus_waiting.append([malus,1])
         elif malus.takes_effect == 'next_two_turns':
-            pass
+            self.malus_waiting.append([malus,2])
         elif malus.takes_effect == 'next_merchant':
-            pass
-        elif malus.takes_effect == 'immed_and_next_turn':
-            pass
+            self.malus_waiting.append([malus,'merchant'])
+
+        #Remove Malus from player's currently affected by malus list
+
+    def check_for_malus_this_turn(self, square, player_id):
+        for malus in self.malus_waiting:
+            if type(malus[1]) == int and malus[1] > 0:
+                malus = [malus[0], malus[1] - 1]
+            elif type(malus[1]) == int and malus[1] == 0:
+                self.manage_malus_effect(player_id,malus[0])
 
     def manage_square_effect(self,current_player,color_of_square):
         player_id = current_player.player_id
