@@ -101,7 +101,34 @@ CURRENCY_LARGE_SPRITE_5_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'dollbran
 CURRENCY_LARGE_SPRITE_7_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'dollbran_7.png')
 CURRENCY_LARGE_SPRITE_10_ICON_FILE_PATH = os.path.join(SPRITES_LOCATION,'dollbran_10.png')
 
-def get_items_from_db(number_of_items_to_get,player_in_world):
+def get_item_from_db(name_of_item,player_in_world):
+    db_connection = sqlite3.connect(ITEMS_DB_FILE_PATH)
+    db_connection.row_factory = sqlite3.Row
+    db_cursor = db_connection.cursor()
+
+    class Item:
+        def __init__(self,name,cost,targets,effect,sprite_file_name):
+            self.name = name
+            self.cost = cost
+            self.targets = targets
+            self.effect = effect
+            self.sprite = get_effect_background_file(player_in_world,'items',sprite_file_name)
+
+    db_cursor.execute('SELECT * FROM items WHERE item_avail_in_world=?', (player_in_world,))
+    items_in_current_world_data = db_cursor.fetchall()
+    current_item = None
+    for item in items_in_current_world_data:
+        if item.name == name_of_item:
+            item_name = item[1]
+            item_cost = item[2]
+            item_target = item[3]
+            item_effect = item[4]
+            item_image_file_name = item[6]
+            current_item = Item(item_name,item_cost,item_target,item_effect,item_image_file_name)
+            break
+    return current_item
+
+def get_random_items_from_db(number_of_items_to_get,player_in_world):
     db_connection = sqlite3.connect(ITEMS_DB_FILE_PATH)
     db_connection.row_factory = sqlite3.Row
     db_cursor = db_connection.cursor()
@@ -130,6 +157,7 @@ def get_items_from_db(number_of_items_to_get,player_in_world):
     for _ in range(number_of_items_to_get):
         randomly_selected_item = random.choice(items_for_current_world)
         randomly_selected_items.append(randomly_selected_item)
+        items_for_current_world.remove(randomly_selected_item)
 
     return randomly_selected_items
 
@@ -743,9 +771,20 @@ class Game(arcade.Window):
                 if malus.targets_value_change_type == 'decrement':
                     pass
 
-            # Remove Malus from player's currently affected by malus list
+            for player in self.players:
+                if player.player_id == player_id:
+                    for malus_affecting_player in player.currently_affected_by_malus:
+                        if malus_affecting_player == malus.name:
+                            player.currently_affected_by_malus.remove(malus_affecting_player)
+                            break
+            for malus_active in self.malus_waiting:
+                if malus_active.name == malus.name:
+                    self.malus_waiting.remove(malus)
+
         else:
-            # Add Malus to player's currently affected by malus list
+            for player in self.players:
+                if player.player_id == player_id:
+                    player.currently_affected_by_malus.append(malus.name)
             if malus.takes_effect == 'next_turn':
                 self.malus_waiting.append([malus,1])
             elif malus.takes_effect == 'next_two_turns':
@@ -753,10 +792,10 @@ class Game(arcade.Window):
             elif malus.takes_effect == 'next_merchant':
                 self.malus_waiting.append([malus,'merchant'])
 
-    def check_for_malus_this_turn(self, square, player_id):
-        for malus in self.malus_waiting:
+    def check_for_malus_this_turn(self, player_id):
+        for index, malus in enumerate(self.malus_waiting):
             if type(malus[1]) == int and malus[1] > 0:
-                malus = [malus[0], malus[1] - 1]
+                self.malus_waiting[index] = [malus[0], malus[1] - 1]
             elif type(malus[1]) == int and malus[1] == 0:
                 malus[0].takes_effect = 'immed'
                 self.manage_malus_effect(player_id,malus[0])
@@ -790,14 +829,14 @@ class Game(arcade.Window):
                     title="Confirmation de votre achat", choices=["Oui", "Non"], image=item_selected.sprite)
                 return user_confirmation
 
-            items = get_items_from_db(3,current_player.current_world)
+            items = get_random_items_from_db(3,current_player.current_world)
             for malus in self.malus_waiting:
                 if type(malus[1]) == str and malus[1] == "merchant":
                     for malus_name in current_player.currently_affected_by_malus:
                         if malus_name == malus[0].name:
                             for item in items:
                                 item.cost = float(item.cost*2)
-                                #Remove Malus from player's currently affected by malus list and the waiting malus list
+                            current_player.currently_affected_by_malus.remove(malus_name)
 
             easygui.msgbox("Vous êtes sur une case de marchand, vous pouvez échanger vos Dollbrans pour des objets qui peuvent vous aider dans votre aventure.",
                            title="Case de Marchand",ok_button="Voir les objets en vente",image=merchant_background_image_file_path)
@@ -824,6 +863,7 @@ class Game(arcade.Window):
                             transaction_result = self.manage_merchant_interaction(player_id, item_selected.cost)
                             if transaction_result == "not_enough_dollbrans":
                                 easygui.msgbox(msg="Vous ne pouvez pas acheter cet objet, vous n'avez pas assez de Dollbrans !",title="Pas assez de Dollbrans")
+                                continue
                             elif transaction_result == "purchase_ok":
                                 while True:
                                     try:
@@ -833,6 +873,8 @@ class Game(arcade.Window):
                                             break
                                         elif confirm == "Non":
                                             break
+                                        else:
+                                            continue
                                     except AssertionError:
                                         continue
                                 break
@@ -896,7 +938,7 @@ class Game(arcade.Window):
                 item_found_image_file_path = os.path.join(EFFECTS_BACKGROUNDS_LOCATION, 'bonus_item.png')
                 easygui.msgbox("C'est positif !!! Voyons voir quel trésor vous avez obtenu !",
                            title="Résultat de la case de hasard",ok_button="Voir l'objet trouvé",image=item_found_image_file_path)
-                item = get_items_from_db(1,current_player.current_world)[0]
+                item = get_random_items_from_db(1,current_player.current_world)[0]
                 for player in self.players:
                     if player.player_id == player_id:
                         player.currently_held_items.append(item.name)
@@ -916,11 +958,18 @@ class Game(arcade.Window):
                     self.roll_dice_if_allowed()
                     break
 
-    def view_inventory(self,player_id):
-        pass
-
     def item_used(self):
         pass
+
+    def view_inventory(self,):
+        current_player = self.players[self.player_turn - 1]
+        if len(current_player.currently_held_items) == 0:
+            easygui.msgbox(msg="Vous n'avez aucun objet dans votre inventaire...",title="Inventaire vide")
+        else:
+            items_in_player_inventory = []
+            for item_name in current_player.currently_held_items:
+                items_in_player_inventory.append(get_item_from_db(item_name,current_player.current_world))
+            #EasyGUI for displaying infos/pictures of currently held items
 
     def roll_dice(self):
         dice_number = random.randint(1, 6)  # Generate a random number between 1 and 6
