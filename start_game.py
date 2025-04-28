@@ -969,7 +969,7 @@ class Game(arcade.Window):
             items_in_player_inventory = []
             for item_name in current_player.currently_held_items:
                 items_in_player_inventory.append(get_item_from_db(item_name,current_player.current_world))
-            #EasyGUI for displaying infos/pictures of currently held items
+            #EasyGUI for displaying infos/pictures of currently held items and making a choice to use one of them
 
     def roll_dice(self):
         dice_number = random.randint(1, 6)  # Generate a random number between 1 and 6
